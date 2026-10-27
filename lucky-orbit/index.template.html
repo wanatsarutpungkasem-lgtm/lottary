@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#12101c"><meta name="description" content="สุ่มเลขส่วนตัวผ่านลูกบอล Lucky Orbit ด้วย Web Crypto ที่ให้ทุกชุดเลขมีโอกาสเท่ากัน">
+  <title>Lucky Orbit — จังหวะดี ๆ เริ่มที่ลูกบอล</title>
+  <link rel="stylesheet" href="style.css"><script type="module" src="app.js"></script>
+</head>
+<body>
+ <header class="nav wrap"><a class="brand" href="#"><span class="brand-icon">✧</span> LUCKY <b>ORBIT</b></a><a class="nav-link" href="#how">เบื้องหลังการสุ่ม <span>↗</span></a></header>
+ <main class="wrap">
+  <section class="intro"><div class="eyebrow"><span></span> A LITTLE CHANCE. A NEW POSSIBILITY.</div><h1>ให้ความเป็นไปได้<br>หมุนมาเจอ<span>คุณ</span><i>✧</i></h1><p>เขย่าลูกบอล เปิดเลขชุดใหม่<br class="mobile"> แล้วสนุกกับจังหวะที่เป็นของคุณ</p></section>
+  <section class="experience" aria-label="เครื่องสุ่มตัวเลข">
+   <div class="machine-panel"><div class="panel-top"><span>THE ORBIT MACHINE</span><span class="live-dot">พร้อมหมุน</span></div>
+    <div class="universe" id="universe" aria-hidden="true"><span class="star s1">✦</span><span class="star s2">✧</span><span class="star s3">✦</span><div class="orbit o1"></div><div class="orbit o2"></div><div class="globe"><div class="globe-shine"></div><div class="mixer" id="mixer"></div><div class="globe-rim"></div></div><div class="neck"></div><div class="pedestal"><span>LUCKY ORBIT</span><i></i></div><div class="machine-shadow"></div></div>
+    <div class="machine-caption"><span>00 — 09</span><p>ทุกลูกบอลมีโอกาสเท่ากัน</p><span>✦</span></div>
+   </div>
+   <div class="controls"><div class="step">YOUR PERSONAL DRAW <span>✧</span></div><h2>วันนี้ เลขอะไรจะเป็นของคุณ?</h2><p class="muted">เลือกจำนวนหลัก แล้วปล่อยให้ลูกบอลทำงาน</p>
+    <form id="draw-form"><label for="player">ชื่อที่ใช้สุ่ม <span>ไม่บังคับ</span></label><input id="player" maxlength="40" autocomplete="off" placeholder="เช่น คุณโอม" aria-describedby="privacy"><p class="input-note" id="privacy">ชื่อและประวัติเก็บเฉพาะในเบราว์เซอร์นี้</p>
+    <fieldset><legend>เลือกจำนวนหลัก</legend><div class="segments"><label><input type="radio" name="digits" value="2" checked><span><b>2</b> หลัก</span></label><label><input type="radio" name="digits" value="3"><span><b>3</b> หลัก</span></label><label><input type="radio" name="digits" value="6"><span><b>6</b> หลัก</span></label></div></fieldset>
+    <button class="primary" id="draw" type="submit"><span>✧</span> เขย่าแล้วสุ่มเลข <span>↗</span></button></form>
+    <div class="result" aria-live="polite" aria-atomic="true"><div class="result-label" id="result-label">เลขชุดต่อไป กำลังรอคุณอยู่</div><div class="result-balls" id="result-balls"><span class="result-ball placeholder">?</span><span class="result-ball placeholder">?</span></div><p id="result-note">หายใจลึก ๆ แล้วลองหมุนดูสักครั้ง</p><button class="copy" id="copy" type="button" hidden>คัดลอกเลข ↗</button></div>
+    <div class="security"><span>◈</span> สุ่มด้วย Web Crypto <span class="divider">/</span> ไม่ล็อกผลลัพธ์</div>
+   </div>
+  </section>
+  <section class="history"><div class="section-heading"><div><span class="eyebrow">YOUR LITTLE COLLECTION</span><h2>ร่องรอยของความเป็นไปได้</h2></div><button id="clear" type="button" class="text-button">ล้างประวัติ</button></div><div id="history-list" class="history-list"><p class="empty">ยังไม่มีการสุ่ม เริ่มเก็บเลขชุดแรกของคุณได้เลย ✧</p></div><p class="small" id="history-note">แสดง 8 ครั้งล่าสุดของชื่อที่เลือกในเบราว์เซอร์นี้</p></section>
+  <section class="how" id="how"><div><span class="eyebrow">CHANCE, WITH CLARITY</span><h2>สนุกกับความบังเอิญ<br><span>เข้าใจการสุ่มจริง ๆ</span></h2></div><div class="explain"><article><span>01</span><div><h3>โอกาสเท่ากัน ไม่มีเลขที่ถูกล็อก</h3><p>ใช้ crypto.getRandomValues และ rejection sampling เพื่อลดอคติจากการแปลงค่า เลข 0–9 มีโอกาสเท่ากันทุกหลัก และเลขซ้ำในชุดเดียวกันได้</p></div></article><article><span>02</span><div><h3>แต่ละคนสุ่มแยกกัน</h3><p>ทุกครั้งดึงค่าการสุ่มใหม่ ชื่อใช้แยกประวัติเท่านั้น ไม่ได้กำหนดผลลัพธ์ คนต่างกันอาจได้เลขซ้ำกันได้ตามความน่าจะเป็น</p></div></article><article><span>03</span><div><h3>ความสุ่มไม่ใช่การทำนาย</h3><p>เลข 2 หลักแต่ละชุดมีโอกาส 1 ใน 100, 3 หลัก 1 ใน 1,000 และ 6 หลัก 1 ใน 1,000,000 เว็บนี้เพื่อความสนุก ไม่รับรองดวงหรือผลหวย</p></div></article></div></section>
+ </main><footer class="wrap"><a class="brand" href="#">✧ LUCKY ORBIT</a><span>เล็กน้อยของความบังเอิญ มากมายของความเป็นไปได้</span><span>MADE FOR YOUR MOMENT ↗</span></footer>
+</body></html>
