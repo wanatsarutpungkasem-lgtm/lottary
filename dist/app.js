@@ -1,16 +1,68 @@
 import {randomDigits} from './random.js';
 const $ = id => document.getElementById(id);
+const signs={
+ none:['✧','ช่วงเวลาของคุณ','ตั้งความปรารถนาดี ๆ ให้ตัวเอง แล้วเริ่มหมุน'],
+ aries:['♈︎','ราศีเมษ · ธาตุไฟ','เริ่มจากก้าวเล็ก ๆ ที่คุณเลือกได้'],
+ taurus:['♉︎','ราศีพฤษภ · ธาตุดิน','ให้เวลากับสิ่งที่คุณอยากเห็นเติบโต'],
+ gemini:['♊︎','ราศีเมถุน · ธาตุลม','เปิดใจรับมุมมองที่ต่างจากเดิม'],
+ cancer:['♋︎','ราศีกรกฎ · ธาตุน้ำ','ดูแลหัวใจตัวเองเหมือนที่ดูแลคนสำคัญ'],
+ leo:['♌︎','ราศีสิงห์ · ธาตุไฟ','ให้ความสามารถของคุณได้มีพื้นที่เปล่งประกาย'],
+ virgo:['♍︎','ราศีกันย์ · ธาตุดิน','ความก้าวหน้าเล็กน้อยก็มีความหมาย'],
+ libra:['♎︎','ราศีตุลย์ · ธาตุลม','เว้นพื้นที่ให้ทั้งเหตุผลและความรู้สึก'],
+ scorpio:['♏︎','ราศีพิจิก · ธาตุน้ำ','วางสิ่งเก่าเพื่อเปิดพื้นที่ให้สิ่งใหม่'],
+ sagittarius:['♐︎','ราศีธนู · ธาตุไฟ','อนุญาตให้ตัวเองลองเส้นทางใหม่'],
+ capricorn:['♑︎','ราศีมังกร · ธาตุดิน','ก้าวอย่างสม่ำเสมอในจังหวะของตัวเอง'],
+ aquarius:['♒︎','ราศีกุมภ์ · ธาตุลม','ให้คุณค่ากับสิ่งที่ทำให้คุณแตกต่าง'],
+ pisces:['♓︎','ราศีมีน · ธาตุน้ำ','อ่อนโยนกับความฝันและความรู้สึกของตัวเอง']
+};
+function setSign(){const sign=signs[$('zodiac').value]||signs.none;$('sign-glyph').textContent=sign[0];$('sign-title').textContent=sign[1];$('sign-thought').textContent=sign[2];}
+const requestedSign=new URLSearchParams(location.search).get('sign');
+if(requestedSign&&Object.hasOwn(signs,requestedSign))$('zodiac').value=requestedSign;
+setSign();
+$('zodiac').addEventListener('change',()=>{setSign();placeholders();});
 const key = 'lucky-orbit-history-v1';
 let history = [], current = '', busy = false, storageOK = true;
 try { const value = JSON.parse(localStorage.getItem(key) || '[]'); if(Array.isArray(value)) history=value.filter(x=>x&&typeof x.name==='string'&&/^\d{2}$|^\d{3}$|^\d{6}$/.test(x.number)&&Number.isFinite(x.time)).slice(0,200); } catch { storageOK=false; }
 const positions=[[25,59],[43,64],[61,57],[12,45],[31,40],[52,42],[69,36],[20,22],[41,20],[60,16],[8,64],[46,2],[72,61],[28,76]];
 positions.forEach(([x,y], i)=>{const b=document.createElement('span');b.className='ball';b.style.left=x+'%';b.style.top=y+'%';b.textContent=i%10;$('mixer').append(b);});
+const pause = ms => new Promise(resolve=>setTimeout(resolve,ms));
+let ballAnimations=[];
+function startMixing(){
+ const size=$('mixer').getBoundingClientRect().width;
+ $('mixer').querySelectorAll('.ball').forEach((ball,i)=>{
+  const [x,y]=positions[i], dx=x-40.5, dy=y-40.5;
+  const radius=Math.hypot(dx,dy), start=Math.atan2(dy,dx);
+  const frames=Array.from({length:49},(_,j)=>{
+   const progress=j/48, angle=start+progress*Math.PI*6;
+   const wave=Math.sin(progress*Math.PI), r=radius+(28-radius)*wave;
+   const depth=Math.sin(angle);
+   return {transform:`translate3d(${(40.5+Math.cos(angle)*r-x)*size/100}px,${(40.5+Math.sin(angle)*r-y)*size/100}px,0) scale(${1+depth*.1*wave}) rotate(${progress*1080}deg)`,filter:`brightness(${1+depth*.15*wave})`};
+  });
+  ballAnimations.push(ball.animate(frames,{duration:2000+(i%4)*130,iterations:Infinity,easing:'linear'}));
+ });
+}
+function stopMixing(){
+ ballAnimations.forEach(animation=>{
+  const ball=animation.effect.target, pose=getComputedStyle(ball).transform;
+  animation.cancel();
+  ball.animate([{transform:pose},{transform:'none'}],{duration:650,easing:'cubic-bezier(.16,1,.3,1)'});
+ });ballAnimations=[];
+}
+async function revealDraw(number,reduced){
+ $('result-balls').replaceChildren();
+ const slots=[...number].map(()=>{const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);return b;});
+ for(let i=0;i<slots.length;i++){
+  if(!reduced){slots[i].classList.add('awaiting');await pause(i===0?350:480);}
+  slots[i].className='result-ball revealed';slots[i].textContent=number[i];
+  $('result-label').textContent=`กำลังเปิดลูกที่ ${i+1} จาก ${slots.length}`;
+ }
+}
 function name(){ return $('player').value.trim().normalize('NFC') || 'ผู้เล่น'; }
 function time(t){return new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
 function renderHistory(){
  const items=history.filter(x=>x.name===name()).slice(0,8);$('history-list').replaceChildren();
  if(!items.length){const p=document.createElement('p');p.className='empty';p.textContent='ยังไม่มีการสุ่ม เริ่มเก็บเลขชุดแรกของคุณได้เลย ✧';$('history-list').append(p);}
- items.forEach(item=>{const card=document.createElement('article');card.className='history-item';const n=document.createElement('strong');n.textContent=item.number;const p=document.createElement('p');p.textContent=item.name+' · '+time(item.time);card.append(n,p);$('history-list').append(card);});
+ items.forEach(item=>{const card=document.createElement('article');card.className='history-item';const n=document.createElement('strong');n.textContent=item.number;const p=document.createElement('p');p.textContent=item.name+' · '+(item.sign&&signs[item.sign]&&item.sign!=='none'?signs[item.sign][0]+' ':'')+time(item.time);card.append(n,p);$('history-list').append(card);});
  $('clear').disabled=!items.length;
  $('history-note').textContent=storageOK?'แสดง 8 ครั้งล่าสุดของชื่อที่เลือก · เก็บรวมสูงสุด 200 รายการในเบราว์เซอร์นี้':'เบราว์เซอร์ไม่อนุญาตให้บันทึก ประวัติจะอยู่ชั่วคราวจนกว่าจะปิดหน้านี้';
 }
@@ -21,15 +73,23 @@ $('player').addEventListener('input',()=>{renderHistory();placeholders();});
 document.querySelectorAll('[name=digits]').forEach(input=>input.addEventListener('change',placeholders));
 $('draw-form').addEventListener('submit',async e=>{
  e.preventDefault();if(busy)return;busy=true;
+ const signKey=$('zodiac').value;
  const player=name(), digits=Number(document.querySelector('[name=digits]:checked').value);
- $('draw').disabled=true;$('player').disabled=true;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=true);$('copy').hidden=true;current='';
+ $('draw').disabled=true;$('player').disabled=true;$('zodiac').disabled=true;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=true);$('copy').hidden=true;current='';
  try {
   // Decide the result exactly once; the animation never changes or filters it.
-  const number=randomDigits(digits);$('universe').classList.add('spinning');document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='ลูกบอลกำลังหมุน…';$('result-note').textContent='กำลังเปิดเลขชุดใหม่ของคุณ';
-  await new Promise(resolve=>setTimeout(resolve,matchMedia('(prefers-reduced-motion: reduce)').matches?150:2100));
-  current=number;showBalls(number);$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now()});history=history.slice(0,200);save();renderHistory();
+  const number=randomDigits(digits), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $('universe').classList.remove('celebrate');$('universe').classList.add('spinning');
+  document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='รอลุ้นเลขของคุณทีละลูก';
+  if(!reduced)startMixing();
+  await pause(reduced?100:1100);
+  $('result-label').textContent='กำลังผสมลูกบอล…';$('universe').classList.add('peak');
+  await pause(reduced?0:1100);
+  $('universe').classList.add('revealing');document.querySelector('.live-dot').textContent='เปิดผลทีละลูก';
+  await revealDraw(number,reduced);
+  current=number;$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
  }catch(error){$('result-label').textContent='ยังสุ่มไม่สำเร็จ';$('result-note').textContent=error.message;}
- finally{busy=false;$('draw').disabled=false;$('player').disabled=false;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=false);$('universe').classList.remove('spinning');document.querySelector('.live-dot').textContent='พร้อมหมุน';}
+ finally{stopMixing();busy=false;$('draw').disabled=false;$('player').disabled=false;$('zodiac').disabled=false;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=false);$('universe').classList.remove('spinning','peak','revealing');document.querySelector('.live-dot').textContent='พร้อมหมุน';}
 });
 $('copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('copy').textContent='คัดลอกแล้ว ✓';}catch{$('copy').textContent='คัดลอกไม่ได้ กรุณาเลือกเลขแล้วคัดลอกเอง';}});
 $('clear').addEventListener('click',()=>{history=history.filter(x=>x.name!==name());save();renderHistory();});

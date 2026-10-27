@@ -3,11 +3,19 @@ const template=readFileSync(new URL('./index.template.html',import.meta.url),'ut
 const css=readFileSync(new URL('./dist/style.css',import.meta.url),'utf8');
 const random=readFileSync(new URL('./dist/random.js',import.meta.url),'utf8').replace('export function','function');
 const app=readFileSync(new URL('./dist/app.js',import.meta.url),'utf8').replace("import {randomDigits} from './random.js';",'');
+const navScript=`<script>(function(){const menu=document.querySelector('.nav-menu');if(!menu)return;document.addEventListener('click',event=>{if(!menu.contains(event.target))menu.open=false;});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus();}});})();</script>`;
 // A classic, scoped script requires no module loader or cross-file requests.
 const script='(function(){\n'+random+'\n'+app+'\n})();';
 let html=template.replace('<link rel="stylesheet" href="style.css"><script type="module" src="app.js"></script>','<style>'+css+'</style>');
-html=html.replace('</body>','<script>'+script+'</script></body>');
+html=html.replace('</body>','<script>'+script+'</script>'+navScript+'</body>');
 writeFileSync(new URL('./dist/index.html',import.meta.url),html);
-writeFileSync(new URL('../lucky-orbit.html',import.meta.url),html);
-writeFileSync(new URL('../lucky-orbit-fixed.html',import.meta.url),html);
+const standalone=html.replaceAll('href="index.html"','href="lucky-orbit-fixed.html"');
+writeFileSync(new URL('../lucky-orbit.html',import.meta.url),standalone);
+writeFileSync(new URL('../lucky-orbit-fixed.html',import.meta.url),standalone);
+const about=readFileSync(new URL('./how.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>').replace('</body>',navScript+'</body>');
+writeFileSync(new URL('./dist/how-it-works.html',import.meta.url),about);
+writeFileSync(new URL('../how-it-works.html',import.meta.url),about.replaceAll('href="index.html"','href="lucky-orbit-fixed.html"'));
+const zodiac=readFileSync(new URL('./zodiac.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>').replace('</body>',navScript+'</body>');
+writeFileSync(new URL('./dist/zodiac.html',import.meta.url),zodiac);
+writeFileSync(new URL('../zodiac.html',import.meta.url),zodiac.replaceAll('href="index.html','href="lucky-orbit-fixed.html'));
 console.log('Built self-contained HTML for browser and Netlify.');
