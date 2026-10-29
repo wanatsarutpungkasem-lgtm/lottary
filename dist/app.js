@@ -39,8 +39,8 @@ function startMixing(){
   const [x,y]=positions[i], dx=x-40.5, dy=y-40.5;
   const radius=Math.hypot(dx,dy), start=Math.atan2(dy,dx);
   const frames=Array.from({length:49},(_,j)=>{
-   const progress=j/48, angle=start+progress*Math.PI*6;
-   const wave=Math.sin(progress*Math.PI), r=radius+(28-radius)*wave;
+   const progress=j/48, wave=Math.sin(progress*Math.PI), angle=start+progress*Math.PI*6+Math.sin(progress*Math.PI*4+i*.5)*wave*.35;
+   const r=radius+(28-radius)*wave;
    const depth=Math.sin(angle);
    return {transform:`translate3d(${(40.5+Math.cos(angle)*r-x)*size/100}px,${(40.5+Math.sin(angle)*r-y)*size/100}px,0) scale(${1+depth*.1*wave}) rotate(${progress*1080}deg)`,filter:`brightness(${1+depth*.15*wave})`};
   });

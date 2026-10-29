@@ -17,7 +17,7 @@ for(const [page,source,script] of pages){
  html=html.replace('</head>',meta+'</head>');
  if(!html.includes('name="description"'))html=html.replace('</head>','<meta name="description" content="'+description+'"></head>');
  const scripts='<script type="module" src="preferences.js"></script>'+(script?'<script type="module" src="'+script+'.js"></script>':'');
- write('./dist/'+page+'.html',html.replace('</body>',scripts+'</body>').replace('href="style.css"','href="style.css?v=3.3"').replace('src="preferences.js"','src="preferences.js?v=3.3"').replace('src="'+script+'.js"','src="'+script+'.js?v=3.3"'));
+ write('./dist/'+page+'.html',html.replace('</body>',scripts+'</body>').replace('href="style.css"','href="style.css?v=3.4"').replace('src="preferences.js"','src="preferences.js?v=3.4"').replace('src="'+script+'.js"','src="'+script+'.js?v=3.4"'));
  let offline=html.replace('<link rel="stylesheet" href="style.css">','<style>'+standaloneCSS+'</style>').replace('<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">','');
  let code=common;
  if(script){const dependencies=script==='app'?bundles.random:script==='siamsi'?bundles.random+'\n'+bundles.discovery+'\n'+strip(read('./dist/siamsi-cards.js'))+'\n'+strip(read('./dist/motion.js')):bundles.random+'\n'+bundles.discovery+'\n'+bundles.daily;code+='\n(function(){'+dependencies+'\n'+strip(read('./dist/'+script+'.js'))+'})();';}

@@ -18,3 +18,20 @@ import {resolveBackground,backgroundLabels} from './backgrounds.js';
  const share=document.getElementById('share-site');share?.addEventListener('click',async()=>{const url='https://wanatsarutpungkasem-lgtm.github.io/lottary/';try{if(navigator.share)await navigator.share({title:'Lucky By wanatsarut',text:'ช่วงเวลาแห่งการลุ้น ในสไตล์ของโอม',url});else{await navigator.clipboard.writeText(url);share.textContent='คัดลอกลิงก์แล้ว ✓';}}catch(error){if(error.name!=='AbortError')share.textContent='คัดลอกลิงก์จากแถบที่อยู่ได้เลย';}});
 })();
 (()=>{const menus=[...document.querySelectorAll('.nav-menu,.ambience-menu')];for(const menu of menus)menu.addEventListener('toggle',()=>{if(menu.open)for(const other of menus)if(other!==menu)other.open=false;});document.addEventListener('click',event=>{for(const menu of menus)if(!menu.contains(event.target))menu.open=false;});document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const menu of menus)if(menu.open){menu.open=false;menu.querySelector('summary').focus();}});})();
+
+// Small, self-hosted accents. Never affect the random result or page controls.
+(()=>{
+ const calm=()=>matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';
+ for(const stage of document.querySelectorAll('.universe,.ritual-halo')){
+  const aura=document.createElement('div');aura.className='orbit-atmosphere';aura.setAttribute('aria-hidden','true');
+  for(let i=0;i<12;i++){const star=document.createElement('i');star.style.cssText=`--i:${i};--x:${8+(i*29)%84}%;--y:${6+(i*37)%88}%;--delay:${-(i*.73)}s`;aura.append(star);}stage.prepend(aura);
+ }
+ const targets=document.querySelectorAll('.intro,.source-notice,.experience,.ritual-layout,.saved-sanctuary,.quick-paths,.number-option,.zodiac-card,.privacy-panel');
+ if('IntersectionObserver' in window&&!calm()){
+  const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('motion-visible');observer.unobserve(entry.target);}},{threshold:.06});
+  for(const target of targets){target.classList.add('motion-enter');observer.observe(target);}
+  document.documentElement.classList.add('motion-ready');
+  // Avoid hidden content when restoring from a background tab or browser history.
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')for(const target of targets)if(target.getBoundingClientRect().top<innerHeight)target.classList.add('motion-visible');});
+ }
+})();
