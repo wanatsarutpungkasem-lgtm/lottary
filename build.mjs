@@ -1,6 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 const template=readFileSync(new URL('./index.template.html',import.meta.url),'utf8');
-const css=readFileSync(new URL('./dist/style.css',import.meta.url),'utf8');
+const imageData='data:image/jpeg;base64,'+readFileSync(new URL('./dist/assets/ganesha-background.jpg',import.meta.url)).toString('base64');
+const css=readFileSync(new URL('./dist/style.css',import.meta.url),'utf8').replaceAll('assets/ganesha-background.jpg',imageData);
 const random=readFileSync(new URL('./dist/random.js',import.meta.url),'utf8').replace('export function','function');
 const app=readFileSync(new URL('./dist/app.js',import.meta.url),'utf8').replace("import {randomDigits} from './random.js';",'');
 const navScript=`<script>(function(){const menu=document.querySelector('.nav-menu');if(!menu)return;document.addEventListener('click',event=>{if(!menu.contains(event.target))menu.open=false;});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus();}});})();</script>`;
