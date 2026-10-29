@@ -58,7 +58,7 @@ async function revealDraw(number,reduced){
  $('result-balls').replaceChildren();
  const slots=[...number].map(()=>{const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);return b;});
  for(let i=0;i<slots.length;i++){
-  if(!reduced){slots[i].classList.add('awaiting');await pause(i===0?350:480);}
+  if(!reduced){if(i===slots.length-1)document.getElementById('movable-machine').classList.add('reveal-flash');slots[i].classList.add('awaiting');await pause(i===0?350:480);}
   slots[i].className='result-ball revealed';paintBall(slots[i],number[i]);
   $('result-label').textContent=`กำลังเปิดลูกที่ ${i+1} จาก ${slots.length}`;
  }
@@ -101,7 +101,7 @@ $('draw-form').addEventListener('submit',async e=>{
  try {
   // Decide the result exactly once; the animation never changes or filters it.
   const number=randomDigits(digits), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
-  $('universe').classList.remove('celebrate');$('universe').classList.add('spinning');
+  document.getElementById('movable-machine').classList.remove('reveal-flash');$('universe').classList.remove('celebrate');$('universe').classList.add('spinning');
   document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='รอลุ้นเลขของคุณทีละลูก';
   if(!reduced)startMixing();
   await pause(reduced?100:1100);

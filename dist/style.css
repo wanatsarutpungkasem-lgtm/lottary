@@ -35,3 +35,11 @@ html,body{overflow-x:clip}.restore-floating{position:fixed;right:20px;bottom:20p
 @keyframes golden-rays{to{transform:rotate(360deg)}}
 @media(max-width:760px){.movable-machine:before{inset:-20px -13px;filter:blur(20px)}.movable-machine:after{box-shadow:0 0 12px #ffdf8b88,0 0 34px #f5bb5640}.universe:before{animation:none}}
 @media(prefers-reduced-motion:reduce){.movable-machine:before,.universe:before{animation:none}}
+
+/* One gold-white bloom just before the final ball; no repeating strobe. */
+.reveal-light{position:absolute;inset:-8%;z-index:7;pointer-events:none;border-radius:50%;opacity:0;background:radial-gradient(circle at 50% 45%,#fffef1 0%,#fff4c5ed 8%,#ffe290a6 22%,#f7bd4c44 43%,transparent 67%);mix-blend-mode:screen;transform:scale(.45)}
+.reveal-flash .reveal-light{animation:reveal-gold-bloom 1.7s cubic-bezier(.16,.75,.25,1) both}
+.movable-machine.reveal-flash:before{animation:reveal-frame-bloom 2s ease-out both}
+@keyframes reveal-gold-bloom{0%{opacity:0;transform:scale(.45)}18%{opacity:1;transform:scale(1.15)}40%{opacity:.7;transform:scale(1.4)}100%{opacity:0;transform:scale(1.65)}}
+@keyframes reveal-frame-bloom{0%{opacity:.8;transform:scale(1)}18%{opacity:1;transform:scale(1.09);filter:blur(18px) brightness(2.5)}45%{opacity:1;transform:scale(1.06);filter:blur(28px) brightness(1.7)}100%{opacity:.65;transform:scale(1);filter:blur(28px) brightness(1)}}
+@media(prefers-reduced-motion:reduce){.reveal-flash .reveal-light{animation:none;opacity:0}.movable-machine.reveal-flash:before{animation:none}}
