@@ -1,10 +1,13 @@
+import {resolveBackground,backgroundLabels} from './backgrounds.js';
 (()=>{
  const root=document.documentElement,key='lucky-preferences-v1';
- let prefs={sound:false,soft:false,large:false};try{const saved=JSON.parse(localStorage.getItem(key));if(saved)prefs={sound:saved.sound===true,soft:saved.soft===true,large:saved.large===true};}catch{}
+ let prefs={sound:false,soft:false,large:false,background:"daily"};try{const saved=JSON.parse(localStorage.getItem(key));if(saved)prefs={sound:saved.sound===true,soft:saved.soft===true,large:saved.large===true,background:["daily","ganesha","mandala","stars","lotus"].includes(saved.background)?saved.background:"daily"};}catch{}
+ const scene=document.getElementById('setting-background');const sessionScene=resolveBackground('daily');
  const sound=document.getElementById('setting-sound'),soft=document.getElementById('setting-soft'),large=document.getElementById('setting-large');
- function apply(){root.dataset.effects=prefs.soft?'soft':'full';sound.checked=prefs.sound;soft.checked=prefs.soft;large.checked=prefs.large;root.dataset.type=prefs.large?'large':'normal';}
+ function apply(){scene.value=prefs.background;const selected=prefs.background==='daily'?sessionScene:resolveBackground(prefs.background);root.dataset.scene=selected;document.getElementById('background-status').textContent=(prefs.background==='daily'?'วันนี้: ':'เลือกไว้: ')+backgroundLabels[selected];root.dataset.effects=prefs.soft?'soft':'full';sound.checked=prefs.sound;soft.checked=prefs.soft;large.checked=prefs.large;root.dataset.type=prefs.large?'large':'normal';}
  function save(){try{localStorage.setItem(key,JSON.stringify(prefs));}catch{}apply();}
  large.addEventListener('change',()=>{prefs.large=large.checked;save();});
+ scene.addEventListener('change',()=>{prefs.background=scene.value;save();});
  let audio;
  function unlock(){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio||=new Audio();if(audio.state==='suspended')audio.resume().catch(()=>{});}}catch{}}
  sound.addEventListener('change',()=>{prefs.sound=sound.checked;if(prefs.sound)unlock();save();if(prefs.sound)play('wood');});soft.addEventListener('change',()=>{prefs.soft=soft.checked;save();});

@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {resolveBackground,backgroundLabels} from './dist/backgrounds.js';
+test('manual backgrounds stay fixed regardless of date',()=>{for(const name of Object.keys(backgroundLabels)){assert.equal(resolveBackground(name,new Date('2026-10-29T00:00:00Z')),name);assert.equal(resolveBackground(name,new Date('2026-11-02T00:00:00Z')),name);}});
+test('daily scene is stable within the Thai day and changes at Thai midnight',()=>{const morning=resolveBackground('daily',new Date('2026-10-28T17:00:00Z'));assert.equal(resolveBackground('daily',new Date('2026-10-29T16:59:59Z')),morning);assert.notEqual(resolveBackground('daily',new Date('2026-10-29T17:00:00Z')),morning);});
+test('daily cycle uses all four themes and invalid choice falls back safely',()=>{const days=[0,1,2,3].map(n=>resolveBackground('daily',new Date(Date.UTC(2026,9,29+n,1))));assert.equal(new Set(days).size,4);const date=new Date('2026-10-29T00:00:00Z');assert.equal(resolveBackground('foreign-url',date),resolveBackground('daily',date));});
