@@ -58,7 +58,7 @@ async function revealDraw(number,reduced){
  $('result-balls').replaceChildren();
  const slots=[...number].map(()=>{const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);return b;});
  for(let i=0;i<slots.length;i++){
-  if(!reduced){if(i===slots.length-1)document.getElementById('movable-machine').classList.add('reveal-flash');slots[i].classList.add('awaiting');await pause(i===0?350:480);}
+  if(!reduced){if(i===slots.length-1)document.getElementById('movable-machine').classList.add('reveal-flash','ceremony-finale');slots[i].classList.add('awaiting');await pause(i===0?350:480);}
   slots[i].className='result-ball revealed';paintBall(slots[i],number[i]);
   $('result-label').textContent=`กำลังเปิดลูกที่ ${i+1} จาก ${slots.length}`;
  }
@@ -101,19 +101,19 @@ $('draw-form').addEventListener('submit',async e=>{
  try {
   // Decide the result exactly once; the animation never changes or filters it.
   const number=randomDigits(digits), reduced=(matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft');
-  document.getElementById('movable-machine').classList.remove('reveal-flash');$('universe').classList.remove('celebrate');$('universe').classList.add('spinning');
+  document.getElementById('movable-machine').classList.remove('reveal-flash','ceremony-finale');$('universe').classList.remove('celebrate');$('universe').classList.add('spinning');document.getElementById('movable-machine').classList.add('draw-ceremony');
   document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='รอลุ้นเลขของคุณทีละลูก';
   if(!reduced)startMixing();
   await pause(reduced?100:1100);
-  $('result-label').textContent='กำลังผสมลูกบอล…';$('universe').classList.add('peak');
+  $('result-label').textContent='ลูกบอลกำลังรวมตัว…';$('universe').classList.add('peak');
   await pause(reduced?0:1100);
   $('universe').classList.add('revealing');document.querySelector('.live-dot').textContent='เปิดผลทีละลูก';
   await revealDraw(number,reduced);
   current=number;document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
-  await pause(reduced?0:500);
+  await pause(reduced?0:1100);
   openDrawDialog(number,player,signKey);
  }catch(error){$('result-label').textContent='ยังสุ่มไม่สำเร็จ';$('result-note').textContent=error.message;}
- finally{stopMixing();busy=false;$('draw').disabled=false;$('player').disabled=false;$('zodiac').disabled=false;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=false);$('universe').classList.remove('spinning','peak','revealing');document.querySelector('.live-dot').textContent='พร้อมหมุน';}
+ finally{stopMixing();busy=false;$('draw').disabled=false;$('player').disabled=false;$('zodiac').disabled=false;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=false);$('universe').classList.remove('spinning','peak','revealing');document.getElementById('movable-machine').classList.remove('draw-ceremony');document.querySelector('.live-dot').textContent='พร้อมหมุน';}
 });
 $('copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('copy').textContent='คัดลอกแล้ว ✓';}catch{$('copy').textContent='คัดลอกไม่ได้ กรุณาเลือกเลขแล้วคัดลอกเอง';}});
 $('clear').addEventListener('click',()=>{history=history.filter(x=>x.name!==name());save();renderHistory();});

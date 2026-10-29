@@ -1,9 +1,10 @@
 (()=>{
  const root=document.documentElement,key='lucky-preferences-v1';
- let prefs={sound:false,soft:false};try{const saved=JSON.parse(localStorage.getItem(key));if(saved)prefs={sound:saved.sound===true,soft:saved.soft===true};}catch{}
- const sound=document.getElementById('setting-sound'),soft=document.getElementById('setting-soft');
- function apply(){root.dataset.effects=prefs.soft?'soft':'full';sound.checked=prefs.sound;soft.checked=prefs.soft;}
+ let prefs={sound:false,soft:false,large:false};try{const saved=JSON.parse(localStorage.getItem(key));if(saved)prefs={sound:saved.sound===true,soft:saved.soft===true,large:saved.large===true};}catch{}
+ const sound=document.getElementById('setting-sound'),soft=document.getElementById('setting-soft'),large=document.getElementById('setting-large');
+ function apply(){root.dataset.effects=prefs.soft?'soft':'full';sound.checked=prefs.sound;soft.checked=prefs.soft;large.checked=prefs.large;root.dataset.type=prefs.large?'large':'normal';}
  function save(){try{localStorage.setItem(key,JSON.stringify(prefs));}catch{}apply();}
+ large.addEventListener('change',()=>{prefs.large=large.checked;save();});
  let audio;
  function unlock(){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio||=new Audio();if(audio.state==='suspended')audio.resume().catch(()=>{});}}catch{}}
  sound.addEventListener('change',()=>{prefs.sound=sound.checked;if(prefs.sound)unlock();save();if(prefs.sound)play('wood');});soft.addEventListener('change',()=>{prefs.soft=soft.checked;save();});
