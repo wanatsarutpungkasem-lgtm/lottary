@@ -1,31 +1,27 @@
-import {readFileSync,writeFileSync} from 'node:fs';
-const template=readFileSync(new URL('./index.template.html',import.meta.url),'utf8');
-const imageData='data:image/jpeg;base64,'+readFileSync(new URL('./dist/assets/ganesha-background.jpg',import.meta.url)).toString('base64');
-const css=readFileSync(new URL('./dist/style.css',import.meta.url),'utf8').replaceAll('assets/ganesha-background.jpg',imageData);
-const random=readFileSync(new URL('./dist/random.js',import.meta.url),'utf8').replace('export function','function');
-const app=readFileSync(new URL('./dist/app.js',import.meta.url),'utf8').replace("import {randomDigits} from './random.js';",'');
-const navScript=`<script>(function(){const menu=document.querySelector('.nav-menu');if(!menu)return;document.addEventListener('click',event=>{if(!menu.contains(event.target))menu.open=false;});document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu.open){menu.open=false;menu.querySelector('summary').focus();}});})();</script>`;
-// A classic, scoped script requires no module loader or cross-file requests.
-const script='(function(){\n'+random+'\n'+app+'\n})();';
-let html=template.replace('<link rel="stylesheet" href="style.css"><script type="module" src="app.js"></script>','<style>'+css+'</style>');
-html=html.replace('</body>','<script>'+script+'</script>'+navScript+'</body>');
-writeFileSync(new URL('./dist/index.html',import.meta.url),html);
-const standalone=html.replaceAll('href="index.html"','href="lucky-orbit-fixed.html"');
-writeFileSync(new URL('../lucky-orbit.html',import.meta.url),standalone);
-writeFileSync(new URL('../lucky-orbit-fixed.html',import.meta.url),standalone);
-const about=readFileSync(new URL('./how.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>').replace('</body>',navScript+'</body>');
-writeFileSync(new URL('./dist/how-it-works.html',import.meta.url),about);
-writeFileSync(new URL('../how-it-works.html',import.meta.url),about.replaceAll('href="index.html"','href="lucky-orbit-fixed.html"'));
-const zodiac=readFileSync(new URL('./zodiac.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>').replace('</body>',navScript+'</body>');
-writeFileSync(new URL('./dist/zodiac.html',import.meta.url),zodiac);
-writeFileSync(new URL('../zodiac.html',import.meta.url),zodiac.replaceAll('href="index.html','href="lucky-orbit-fixed.html'));
-const discovery=readFileSync(new URL('./dist/discovery.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replaceAll('export function','function');
-for(const [page,scriptName] of [['siamsi','siamsi'],['lucky-numbers','numbers']]){
- const pageScript=readFileSync(new URL('./dist/'+scriptName+'.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'');
- let output=readFileSync(new URL('./'+page+'.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>');
- output=output.replace('<script type="module" src="'+scriptName+'.js"></script>','<script>(function(){'+random+'\n'+discovery+'\n'+pageScript+'\n})();</script>');
- output=output.replace('</body>',navScript+'</body>');
- writeFileSync(new URL('./dist/'+page+'.html',import.meta.url),output);
- writeFileSync(new URL('../'+page+'.html',import.meta.url),output.replaceAll('href="index.html','href="lucky-orbit-fixed.html'));
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+const read=path=>readFileSync(new URL(path,import.meta.url),'utf8');
+const write=(path,value)=>writeFileSync(new URL(path,import.meta.url),value);
+const root='https://wanatsarutpungkasem-lgtm.github.io/lottary/';
+const pages=[['index','index','app'],['how-it-works','how',null],['zodiac','zodiac',null],['siamsi','siamsi','siamsi'],['lucky-numbers','lucky-numbers','numbers'],['about','about',null]];
+const common=read('./dist/preferences.js');
+const strip=s=>s.replace(/^import .*;$/gm,'').replaceAll('export function','function');
+const bundles={random:strip(read('./dist/random.js')),discovery:strip(read('./dist/discovery.js')),daily:strip(read('./dist/daily-state.js'))};
+const image='data:image/jpeg;base64,'+readFileSync(new URL('./dist/assets/ganesha-background.jpg',import.meta.url)).toString('base64');
+const standaloneCSS=read('./dist/style.css').replaceAll('assets/ganesha-background.jpg',image);
+for(const [page,source,script] of pages){
+ let html=read('./'+source+'.template.html').replace(/<script[^>]*>[\s\S]*?<\/script>/g,'');
+ const title=html.match(/<title>(.*?)<\/title>/)[1];
+ const description='Lucky By wanatsarut · ช่วงเวลาแห่งการลุ้นในสไตล์ของโอม ลูกบอลทอง เซียมซีข้อคิด และเลขสุ่มเพื่อความสนุก';
+ const meta='<meta property="og:type" content="website"><meta property="og:locale" content="th_TH"><meta property="og:site_name" content="Lucky By wanatsarut"><meta property="og:title" content="'+title+'"><meta property="og:description" content="'+description+'"><meta property="og:url" content="'+root+(page==='index'?'':page+'.html')+'"><meta property="og:image" content="'+root+'assets/share-card.png"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="Lucky By wanatsarut ลูกบอลทองบนพื้นม่วง"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="'+title+'"><meta name="twitter:description" content="'+description+'"><meta name="twitter:image" content="'+root+'assets/share-card.png"><link rel="icon" href="assets/favicon.svg" type="image/svg+xml">';
+ html=html.replace('</head>',meta+'</head>');
+ if(!html.includes('name="description"'))html=html.replace('</head>','<meta name="description" content="'+description+'"></head>');
+ const scripts='<script src="preferences.js" defer></script>'+(script?'<script type="module" src="'+script+'.js"></script>':'');
+ write('./dist/'+page+'.html',html.replace('</body>',scripts+'</body>'));
+ let offline=html.replace('<link rel="stylesheet" href="style.css">','<style>'+standaloneCSS+'</style>').replace('<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">','');
+ let code=common;
+ if(script){const dependencies=script==='app'?bundles.random:script==='siamsi'?bundles.random+'\n'+bundles.discovery:bundles.random+'\n'+bundles.discovery+'\n'+bundles.daily;code+='\n(function(){'+dependencies+'\n'+strip(read('./dist/'+script+'.js'))+'})();';}
+ offline=offline.replace('</body>','<script>'+code+'</script></body>').replaceAll('href="index.html','href="lucky-orbit-fixed.html');
+ write('../'+(page==='index'?'lucky-orbit-fixed':page)+'.html',offline);
+ if(page==='index')write('../lucky-orbit.html',offline);
 }
-console.log('Built self-contained HTML for browser and Netlify.');
+console.log('Built 6 lean GitHub Pages routes and 6 standalone previews.');

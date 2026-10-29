@@ -1,0 +1,16 @@
+(()=>{
+ const root=document.documentElement,key='lucky-preferences-v1';
+ let prefs={sound:false,soft:false};try{const saved=JSON.parse(localStorage.getItem(key));if(saved)prefs={sound:saved.sound===true,soft:saved.soft===true};}catch{}
+ const sound=document.getElementById('setting-sound'),soft=document.getElementById('setting-soft');
+ function apply(){root.dataset.effects=prefs.soft?'soft':'full';sound.checked=prefs.sound;soft.checked=prefs.soft;}
+ function save(){try{localStorage.setItem(key,JSON.stringify(prefs));}catch{}apply();}
+ let audio;
+ function unlock(){try{const Audio=window.AudioContext||window.webkitAudioContext;if(Audio){audio||=new Audio();if(audio.state==='suspended')audio.resume().catch(()=>{});}}catch{}}
+ sound.addEventListener('change',()=>{prefs.sound=sound.checked;if(prefs.sound)unlock();save();if(prefs.sound)play('wood');});soft.addEventListener('change',()=>{prefs.soft=soft.checked;save();});
+ document.addEventListener('pointerdown',()=>{if(prefs.sound)unlock();},{passive:true});document.addEventListener('keydown',()=>{if(prefs.sound)unlock();});
+ function tone(freq,start,duration,type='sine',volume=.035){if(!audio||audio.state!=='running')return;const osc=audio.createOscillator(),gain=audio.createGain();osc.type=type;osc.frequency.setValueAtTime(freq,start);gain.gain.setValueAtTime(.0001,start);gain.gain.exponentialRampToValueAtTime(volume,start+.008);gain.gain.exponentialRampToValueAtTime(.0001,start+duration);osc.connect(gain);gain.connect(audio.destination);osc.start(start);osc.stop(start+duration+.01);}
+ function play(kind){if(!prefs.sound||!audio)return;const t=audio.currentTime;if(kind==='wood'){tone(520,t,.065,'triangle',.025);tone(780,t+.025,.045,'triangle',.012);}else [523.25,659.25,783.99].forEach((freq,i)=>tone(freq,t+i*.09,.65));}
+ document.addEventListener('lucky-sound',event=>play(event.detail));apply();
+ const share=document.getElementById('share-site');share?.addEventListener('click',async()=>{const url='https://wanatsarutpungkasem-lgtm.github.io/lottary/';try{if(navigator.share)await navigator.share({title:'Lucky By wanatsarut',text:'ช่วงเวลาแห่งการลุ้น ในสไตล์ของโอม',url});else{await navigator.clipboard.writeText(url);share.textContent='คัดลอกลิงก์แล้ว ✓';}}catch(error){if(error.name!=='AbortError')share.textContent='คัดลอกลิงก์จากแถบที่อยู่ได้เลย';}});
+})();
+(()=>{const menus=[...document.querySelectorAll('.nav-menu,.ambience-menu')];for(const menu of menus)menu.addEventListener('toggle',()=>{if(menu.open)for(const other of menus)if(other!==menu)other.open=false;});document.addEventListener('click',event=>{for(const menu of menus)if(!menu.contains(event.target))menu.open=false;});document.addEventListener('keydown',event=>{if(event.key==='Escape')for(const menu of menus)if(menu.open){menu.open=false;menu.querySelector('summary').focus();}});})();

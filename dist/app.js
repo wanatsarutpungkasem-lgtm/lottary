@@ -100,7 +100,7 @@ $('draw-form').addEventListener('submit',async e=>{
  $('draw').disabled=true;$('player').disabled=true;$('zodiac').disabled=true;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=true);$('copy').hidden=true;current='';
  try {
   // Decide the result exactly once; the animation never changes or filters it.
-  const number=randomDigits(digits), reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const number=randomDigits(digits), reduced=(matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft');
   document.getElementById('movable-machine').classList.remove('reveal-flash');$('universe').classList.remove('celebrate');$('universe').classList.add('spinning');
   document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='รอลุ้นเลขของคุณทีละลูก';
   if(!reduced)startMixing();
@@ -109,7 +109,7 @@ $('draw-form').addEventListener('submit',async e=>{
   await pause(reduced?0:1100);
   $('universe').classList.add('revealing');document.querySelector('.live-dot').textContent='เปิดผลทีละลูก';
   await revealDraw(number,reduced);
-  current=number;$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
+  current=number;document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
   await pause(reduced?0:500);
   openDrawDialog(number,player,signKey);
  }catch(error){$('result-label').textContent='ยังสุ่มไม่สำเร็จ';$('result-note').textContent=error.message;}
