@@ -67,6 +67,22 @@ function renderHistory(){
  $('history-note').textContent=storageOK?'แสดง 8 ครั้งล่าสุดของชื่อที่เลือก · เก็บรวมสูงสุด 200 รายการในเบราว์เซอร์นี้':'เบราว์เซอร์ไม่อนุญาตให้บันทึก ประวัติจะอยู่ชั่วคราวจนกว่าจะปิดหน้านี้';
 }
 function save(){try{localStorage.setItem(key,JSON.stringify(history));}catch{storageOK=false;}}
+const drawDialog=$('draw-dialog');
+function openDrawDialog(number,player,signKey){
+ $('popup-player').textContent='เลขชุดนี้ของ '+player;
+ $('popup-balls').replaceChildren();
+ for(const digit of number){const ball=document.createElement('span');ball.className='result-ball';ball.textContent=digit;$('popup-balls').append(ball);}
+ $('popup-balls').setAttribute('aria-label','เลขที่สุ่มได้ '+number.split('').join(' '));
+ $('popup-sign').textContent=signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1]:'';
+ $('popup-copy').textContent='คัดลอกเลข';
+ drawDialog.showModal();document.body.classList.add('modal-open');
+}
+function closeDrawDialog(){drawDialog.close();}
+$('popup-close').addEventListener('click',closeDrawDialog);
+$('popup-done').addEventListener('click',closeDrawDialog);
+drawDialog.addEventListener('close',()=>{document.body.classList.remove('modal-open');$('draw').focus({preventScroll:true});});
+drawDialog.addEventListener('click',event=>{if(event.target===drawDialog){const rect=drawDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeDrawDialog();}});
+$('popup-copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('popup-copy').textContent='คัดลอกแล้ว ✓';}catch{$('popup-copy').textContent='กรุณาเลือกเลขแล้วคัดลอกเอง';}});
 function showBalls(number){$('result-balls').replaceChildren();for(const [i,d] of [...number].entries()){const b=document.createElement('span');b.className='result-ball';b.style.animationDelay=(i*100)+'ms';b.textContent=d;$('result-balls').append(b);}}
 function placeholders(){current='';$('copy').hidden=true;$('result-label').textContent='เลขชุดต่อไป กำลังรอคุณอยู่';$('result-note').textContent='หายใจลึก ๆ แล้วลองหมุนดูสักครั้ง';$('result-balls').replaceChildren();for(let i=0;i<Number(document.querySelector('[name=digits]:checked').value);i++){const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);}}
 $('player').addEventListener('input',()=>{renderHistory();placeholders();});
@@ -88,6 +104,8 @@ $('draw-form').addEventListener('submit',async e=>{
   $('universe').classList.add('revealing');document.querySelector('.live-dot').textContent='เปิดผลทีละลูก';
   await revealDraw(number,reduced);
   current=number;$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
+  await pause(reduced?0:500);
+  openDrawDialog(number,player,signKey);
  }catch(error){$('result-label').textContent='ยังสุ่มไม่สำเร็จ';$('result-note').textContent=error.message;}
  finally{stopMixing();busy=false;$('draw').disabled=false;$('player').disabled=false;$('zodiac').disabled=false;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=false);$('universe').classList.remove('spinning','peak','revealing');document.querySelector('.live-dot').textContent='พร้อมหมุน';}
 });
