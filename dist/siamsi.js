@@ -1,17 +1,19 @@
 import {secureIndex} from './discovery.js';
 import {cards} from './siamsi-cards.js';
+import {createMotionSession} from './motion.js';
 const $=id=>document.getElementById(id),dialog=$('siamsi-dialog');
 let busy=false,ready=false,current='',currentCard=null,choice='',saved=[],saveOK=true;
 const savedKey='lucky-siamsi-keeps-v1';
 try{const value=JSON.parse(localStorage.getItem(savedKey)||'[]');if(Array.isArray(value))saved=value.filter(v=>Number.isInteger(v.id)&&v.id>=1&&v.id<=28&&Number.isFinite(v.time)).slice(0,28);}catch{saveOK=false;}
 function showCard(card,kept=false){
+ if(motion.running)motion.stop('stopped');
  currentCard=card;choice=kept?'keep':'';$('paper-number').textContent='ใบที่ '+card.id+' จาก 28 ใบ';$('paper-tone').textContent=card.tone;$('paper-title').textContent=card.title;$('paper-reading').textContent=card.reading;$('paper-action').textContent=card.action;$('paper-wish').textContent=card.wish;
  current='Lucky By wanatsarut · ใบที่ '+card.id+'\n'+card.title+'\n\n'+card.reading+'\n\nลองนำไปใช้: '+card.action+'\n\n'+card.wish+'\n\nข้อคิดเพื่อทบทวนตัวเอง ไม่ใช่คำพยากรณ์';
  $('paper-copy').textContent='คัดลอกข้อความ';$('paper-keep').disabled=kept;$('paper-keep').textContent=kept?'เก็บใบนี้แล้ว ✓':'เก็บใบนี้ไว้กับใจ';$('paper-choice-status').textContent=kept?'ใบที่คุณเลือกเก็บไว้':'';dialog.showModal();document.body.classList.add('modal-open');
 }
 for(const id of ['paper-close','paper-done'])$(id).addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>{document.body.classList.remove('modal-open');$('shake').focus({preventScroll:true});$('shake-status').textContent=choice==='keep'?'เก็บใบนี้ไว้แล้ว เปิดอ่านได้ด้านล่าง':choice==='leave'?'วางใบนี้ไว้ที่เว็บแล้ว ก้าวต่ออย่างเบาใจ':'ปิดใบข้อคิดแล้ว ยังไม่ได้เก็บใบนี้';});
-async function reveal(){if(busy)return;busy=true;$('shake').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));showCard(card);}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('cylinder').classList.remove('shaking');}}
+async function reveal(){if(busy)return;busy=true;$('shake').disabled=true;$('motion-start').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));showCard(card);}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('motion-start').disabled=false;$('cylinder').classList.remove('shaking');}}
 $('paper-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(current);$('paper-copy').textContent='คัดลอกแล้ว ✓';}catch{$('paper-copy').textContent='เลือกข้อความแล้วคัดลอกเองได้ครับ';}});
 function renderSaved(){
  $('saved-leaves').replaceChildren();$('saved-note').textContent=saveOK?'เก็บเฉพาะเบราว์เซอร์นี้ ล้างข้อมูลเว็บไซต์แล้วจะหาย':'บันทึกถาวรไม่ได้ กรุณาดาวน์โหลดใบไว้ในเครื่อง';
@@ -38,13 +40,31 @@ function wake(){if(!frame)frame=requestAnimationFrame(animate);}
 function release(announce=true){held=false;pointer=null;surface.classList.remove('is-held');targetTilt=targetSway=0;wake();if(announce&&!busy&&beats<6)$('shake-status').textContent='จับกระบอกแล้วเขย่าต่ออีก '+(6-beats)+' จังหวะ';}
 function resetShake(){release(false);beats=0;direction=0;$('shake-progress').value=0;$('fallen-stick').classList.remove('drawn');}
 function beat(){beats++;document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'wood'}));$('shake-progress').value=beats;$('shake-status').textContent='เขย่าแล้ว '+beats+' / 6 จังหวะ';if(beats>=6){release();reveal();}}
-surface.addEventListener('pointerdown',event=>{if(!ready){$('shake-status').textContent='กดตั้งจิตก่อน แล้วค่อยจับกระบอกเขย่าครับ';return;}if(busy||held||event.isPrimary===false||event.button!==0)return;if(beats>=6)resetShake();held=true;pointer=event.pointerId;lastX=anchorX=event.clientX;surface.setPointerCapture(pointer);surface.classList.add('is-held');$('shake-status').textContent='ลากสลับซ้าย–ขวาเพื่อเขย่า';wake();});
+surface.addEventListener('pointerdown',event=>{if(motion.running)return;if(!ready){$('shake-status').textContent='กดตั้งจิตก่อน แล้วค่อยจับกระบอกเขย่าครับ';return;}if(busy||held||event.isPrimary===false||event.button!==0)return;if(beats>=6)resetShake();held=true;pointer=event.pointerId;lastX=anchorX=event.clientX;surface.setPointerCapture(pointer);surface.classList.add('is-held');$('shake-status').textContent='ลากสลับซ้าย–ขวาเพื่อเขย่า';wake();});
 surface.addEventListener('pointermove',event=>{if(!held||busy||event.pointerId!==pointer)return;const movement=event.clientX-lastX,dx=event.clientX-anchorX;lastX=event.clientX;targetTilt=Math.max(-24,Math.min(24,targetTilt*.55+movement*1.1));targetSway=Math.max(-28,Math.min(28,dx*.55));if(Math.abs(dx)>=28){const next=Math.sign(dx);if(next!==direction){direction=next;beat();}anchorX=event.clientX;}});
 for(const type of ['pointerup','pointercancel','lostpointercapture'])surface.addEventListener(type,event=>{if(event.pointerId===pointer)release();});
-$('shake').addEventListener('click',()=>{if(busy)return;resetShake();ready=true;$('ritual-step').textContent='๒ · จับกระบอกแล้วเขย่า';$('shake').textContent='ตั้งจิตแล้ว · พร้อมเขย่า ↔';$('shake-status').textContent='ลากกระบอกสลับซ้าย–ขวา หรือใช้ปุ่มลูกศรซ้าย–ขวาบนคีย์บอร์ด';$('shake').focus();});
-$('shake').addEventListener('keydown',event=>{if(!ready||busy||!['ArrowLeft','ArrowRight'].includes(event.key)||event.repeat)return;event.preventDefault();const next=event.key==='ArrowLeft'?-1:1;if(next===direction)return;direction=next;targetTilt=next*20;targetSway=next*10;wake();beat();});
+$('shake').addEventListener('click',()=>{if(busy)return;if(motion.running)motion.stop('stopped');$('motion-status').textContent='กำลังใช้วิธีลากบนหน้าจอ · กดปุ่มโทรศัพท์เพื่อเปลี่ยนกลับ';resetShake();ready=true;$('ritual-step').textContent='๒ · จับกระบอกแล้วเขย่า';$('shake').textContent='ตั้งจิตแล้ว · พร้อมเขย่า ↔';$('shake-status').textContent='ลากกระบอกสลับซ้าย–ขวา หรือใช้ปุ่มลูกศรซ้าย–ขวาบนคีย์บอร์ด';$('shake').focus();});
+$('shake').addEventListener('keydown',event=>{if(motion.running||!ready||busy||!['ArrowLeft','ArrowRight'].includes(event.key)||event.repeat)return;event.preventDefault();const next=event.key==='ArrowLeft'?-1:1;if(next===direction)return;direction=next;targetTilt=next*20;targetSway=next*10;wake();beat();});
 $('shake').addEventListener('keyup',()=>{targetTilt=targetSway=0;wake();});
-dialog.addEventListener('close',()=>{resetShake();ready=false;$('ritual-step').textContent='๑ · ตั้งจิตก่อนเริ่ม';$('shake').textContent='🙏 ตั้งจิต · เริ่มเขย่า';});
+dialog.addEventListener('close',()=>{$('motion-status').textContent='หากต้องการเขย่าเครื่องอีกครั้ง กดปุ่มโทรศัพท์เพื่อเริ่มใหม่';resetShake();ready=false;$('ritual-step').textContent='๑ · ตั้งจิตก่อนเริ่ม';$('shake').textContent='ใช้วิธีลากบนหน้าจอแทน';});
+
+// Motion data stays on this device and is never used to choose the result.
+const motion=createMotionSession({target:window,MotionEvent:window.DeviceMotionEvent,secureContext:window.isSecureContext,
+ onReady(){if(!busy)$('motion-status').textContent='เซนเซอร์พร้อมแล้ว จับโทรศัพท์ให้มั่น แล้วเขย่าเบา ๆ 6 จังหวะ';},
+ onBeat(count,impulse){if(!ready||busy||dialog.open)return;targetTilt=Math.max(-22,Math.min(22,impulse*1.7));targetSway=targetTilt*.6;wake();beat();setTimeout(()=>{targetTilt=targetSway=0;wake();},120);},
+ onState(state){
+  const listening=state==='listening'||state==='requesting';$('motion-stop').hidden=!listening;$('motion-start').disabled=state==='requesting'||busy;
+  $('motion-start').textContent=state==='requesting'?'กำลังขอสิทธิ์เซนเซอร์…':state==='listening'?'📱 เริ่มเขย่าโทรศัพท์ใหม่':'📱 ตั้งจิต · เขย่าด้วยโทรศัพท์';
+  const text={idle:'',requesting:'อนุญาตการเคลื่อนไหวเมื่อเบราว์เซอร์ถาม เพื่อใช้การเขย่าเครื่อง',listening:'กำลังรอสัญญาณจากเครื่อง… ถือให้มั่นแล้วเขย่าเบา ๆ',denied:'ยังไม่ได้รับอนุญาตให้ใช้การเคลื่อนไหว กดเพื่อลองใหม่ หรือใช้วิธีลากแทน',unsupported:'เครื่องหรือเบราว์เซอร์นี้ไม่รองรับการเขย่าโทรศัพท์ ใช้วิธีลากแทนได้',insecure:'เปิดเว็บผ่าน HTTPS เพื่อใช้การเขย่าโทรศัพท์ หรือใช้วิธีลากแทน',unavailable:'ยังไม่พบข้อมูลเซนเซอร์ ลองเปิดเว็บโดยตรงในเบราว์เซอร์ แล้วกดอีกครั้ง หรือใช้วิธีลากแทน',error:'เปิดเซนเซอร์ไม่สำเร็จ ลองใหม่หรือใช้วิธีลากแทนได้',paused:'หยุดเซนเซอร์เมื่อออกจากหน้าแล้ว กดปุ่มเพื่อเริ่มใหม่',stopped:'หยุดการเขย่าโทรศัพท์แล้ว',complete:'ครบ 6 จังหวะแล้ว กำลังเปิดใบข้อคิด'};
+  $('motion-status').textContent=text[state]||'';
+  if(!listening&&state!=='complete'&&state!=='idle')ready=false;
+ }
+});
+$('motion-start').addEventListener('click',()=>{if(busy||dialog.open)return;resetShake();ready=true;$('ritual-step').textContent='๒ · เขย่าโทรศัพท์เบา ๆ';$('shake-status').textContent='รอการเขย่าจากโทรศัพท์';motion.start();});
+$('motion-stop').addEventListener('click',()=>{motion.stop('stopped');release(false);});
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&motion.running){motion.stop('paused');release(false);}});
+window.addEventListener('pagehide',()=>motion.stop('paused'));
+window.addEventListener('resize',()=>{if(held)release(false);});
 
 // Draw the souvenir locally. No remote image, font, or rendering service.
 $('paper-image').addEventListener('click',async()=>{
