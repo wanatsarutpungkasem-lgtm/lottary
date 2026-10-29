@@ -23,8 +23,14 @@ $('zodiac').addEventListener('change',()=>{setSign();placeholders();});
 const key = 'lucky-orbit-history-v1';
 let history = [], current = '', busy = false, storageOK = true;
 try { const value = JSON.parse(localStorage.getItem(key) || '[]'); if(Array.isArray(value)) history=value.filter(x=>x&&typeof x.name==='string'&&/^\d{2}$|^\d{3}$|^\d{6}$/.test(x.number)&&Number.isFinite(x.time)).slice(0,200); } catch { storageOK=false; }
+const ballPalette=[['#fff2bf','#e5b851','#8b5817']];
+function paintBall(ball,digit){
+ const colors=ballPalette[Number(digit)%ballPalette.length];
+ ball.style.setProperty('--ball-hi',colors[0]);ball.style.setProperty('--ball-color',colors[1]);ball.style.setProperty('--ball-dark',colors[2]);
+ const label=document.createElement('span');label.className='ball-digit';label.textContent=digit;ball.replaceChildren(label);
+}
 const positions=[[25,59],[43,64],[61,57],[12,45],[31,40],[52,42],[69,36],[20,22],[41,20],[60,16],[8,64],[46,2],[72,61],[28,76]];
-positions.forEach(([x,y], i)=>{const b=document.createElement('span');b.className='ball';b.style.left=x+'%';b.style.top=y+'%';b.textContent=i%10;$('mixer').append(b);});
+positions.forEach(([x,y], i)=>{const b=document.createElement('span');b.className='ball';b.style.left=x+'%';b.style.top=y+'%';paintBall(b,String(i%10));$('mixer').append(b);});
 const pause = ms => new Promise(resolve=>setTimeout(resolve,ms));
 let ballAnimations=[];
 function startMixing(){
@@ -53,7 +59,7 @@ async function revealDraw(number,reduced){
  const slots=[...number].map(()=>{const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);return b;});
  for(let i=0;i<slots.length;i++){
   if(!reduced){slots[i].classList.add('awaiting');await pause(i===0?350:480);}
-  slots[i].className='result-ball revealed';slots[i].textContent=number[i];
+  slots[i].className='result-ball revealed';paintBall(slots[i],number[i]);
   $('result-label').textContent=`กำลังเปิดลูกที่ ${i+1} จาก ${slots.length}`;
  }
 }
@@ -71,7 +77,7 @@ const drawDialog=$('draw-dialog');
 function openDrawDialog(number,player,signKey){
  $('popup-player').textContent='เลขชุดนี้ของ '+player;
  $('popup-balls').replaceChildren();
- for(const digit of number){const ball=document.createElement('span');ball.className='result-ball';ball.textContent=digit;$('popup-balls').append(ball);}
+ for(const digit of number){const ball=document.createElement('span');ball.className='result-ball';paintBall(ball,digit);$('popup-balls').append(ball);}
  $('popup-balls').setAttribute('aria-label','เลขที่สุ่มได้ '+number.split('').join(' '));
  $('popup-sign').textContent=signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1]:'';
  $('popup-copy').textContent='คัดลอกเลข';
@@ -83,7 +89,7 @@ $('popup-done').addEventListener('click',closeDrawDialog);
 drawDialog.addEventListener('close',()=>{document.body.classList.remove('modal-open');$('draw').focus({preventScroll:true});});
 drawDialog.addEventListener('click',event=>{if(event.target===drawDialog){const rect=drawDialog.getBoundingClientRect();if(event.clientX<rect.left||event.clientX>rect.right||event.clientY<rect.top||event.clientY>rect.bottom)closeDrawDialog();}});
 $('popup-copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('popup-copy').textContent='คัดลอกแล้ว ✓';}catch{$('popup-copy').textContent='กรุณาเลือกเลขแล้วคัดลอกเอง';}});
-function showBalls(number){$('result-balls').replaceChildren();for(const [i,d] of [...number].entries()){const b=document.createElement('span');b.className='result-ball';b.style.animationDelay=(i*100)+'ms';b.textContent=d;$('result-balls').append(b);}}
+function showBalls(number){$('result-balls').replaceChildren();for(const [i,d] of [...number].entries()){const b=document.createElement('span');b.className='result-ball';b.style.animationDelay=(i*100)+'ms';paintBall(b,d);$('result-balls').append(b);}}
 function placeholders(){current='';$('copy').hidden=true;$('result-label').textContent='เลขชุดต่อไป กำลังรอคุณอยู่';$('result-note').textContent='หายใจลึก ๆ แล้วลองหมุนดูสักครั้ง';$('result-balls').replaceChildren();for(let i=0;i<Number(document.querySelector('[name=digits]:checked').value);i++){const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);}}
 $('player').addEventListener('input',()=>{renderHistory();placeholders();});
 document.querySelectorAll('[name=digits]').forEach(input=>input.addEventListener('change',placeholders));
@@ -112,3 +118,28 @@ $('draw-form').addEventListener('submit',async e=>{
 $('copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('copy').textContent='คัดลอกแล้ว ✓';}catch{$('copy').textContent='คัดลอกไม่ได้ กรุณาเลือกเลขแล้วคัดลอกเอง';}});
 $('clear').addEventListener('click',()=>{history=history.filter(x=>x.name!==name());save();renderHistory();});
 renderHistory();
+
+// Move only from the dedicated handle. Form controls keep their normal gestures.
+const movable=$('movable-machine'),handle=$('drag-handle');
+let offset={x:0,y:0},drag=null;
+function placeMachine(x,y){
+ const rect=movable.getBoundingClientRect();
+ const originX=rect.left-offset.x,originY=rect.top-offset.y;
+ const grip=handle.getBoundingClientRect();
+ // Keep a usable piece of the handle inside the current viewport.
+ const minX=24-originX, maxX=Math.max(minX,window.innerWidth-160-originX);
+ const minY=12-originY,maxY=Math.max(minY,window.innerHeight-64-originY);
+ offset={x:Math.max(minX,Math.min(maxX,x)),y:Math.max(minY,Math.min(maxY,y))};
+ movable.style.transform=`translate3d(${offset.x}px,${offset.y}px,0)`;
+ $('restore-floating').hidden=offset.x===0&&offset.y===0;
+}
+function resetMachine(){offset={x:0,y:0};movable.style.transform='';$('restore-floating').hidden=true;}
+handle.addEventListener('pointerdown',event=>{if(event.button!==0)return;drag={id:event.pointerId,x:event.clientX,y:event.clientY,baseX:offset.x,baseY:offset.y};handle.setPointerCapture(event.pointerId);movable.classList.add('is-dragging');event.preventDefault();});
+handle.addEventListener('pointermove',event=>{if(!drag||event.pointerId!==drag.id)return;placeMachine(drag.baseX+event.clientX-drag.x,drag.baseY+event.clientY-drag.y);});
+function endDrag(){drag=null;movable.classList.remove('is-dragging');}
+handle.addEventListener('pointerup',endDrag);handle.addEventListener('pointercancel',endDrag);handle.addEventListener('lostpointercapture',endDrag);
+handle.addEventListener('keydown',event=>{const delta=event.shiftKey?40:12;const steps={ArrowLeft:[-delta,0],ArrowRight:[delta,0],ArrowUp:[0,-delta],ArrowDown:[0,delta]};if(event.key==='Home'){event.preventDefault();resetMachine();}else if(steps[event.key]){event.preventDefault();const [x,y]=steps[event.key];placeMachine(offset.x+x,offset.y+y);}});
+$('reset-machine').addEventListener('click',resetMachine);
+$('restore-floating').addEventListener('click',resetMachine);
+$('toggle-machine').addEventListener('click',()=>{const content=$('machine-content');content.hidden=!content.hidden;$('toggle-machine').setAttribute('aria-expanded',String(!content.hidden));$('toggle-machine').textContent=content.hidden?'แสดงเครื่องสุ่ม':'ชมพื้นหลัง';if(content.hidden)resetMachine();});
+window.addEventListener('resize',resetMachine);
