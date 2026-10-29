@@ -19,4 +19,13 @@ writeFileSync(new URL('../how-it-works.html',import.meta.url),about.replaceAll('
 const zodiac=readFileSync(new URL('./zodiac.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>').replace('</body>',navScript+'</body>');
 writeFileSync(new URL('./dist/zodiac.html',import.meta.url),zodiac);
 writeFileSync(new URL('../zodiac.html',import.meta.url),zodiac.replaceAll('href="index.html','href="lucky-orbit-fixed.html'));
+const discovery=readFileSync(new URL('./dist/discovery.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'').replaceAll('export function','function');
+for(const [page,scriptName] of [['siamsi','siamsi'],['lucky-numbers','numbers']]){
+ const pageScript=readFileSync(new URL('./dist/'+scriptName+'.js',import.meta.url),'utf8').replace(/^import .*;$/gm,'');
+ let output=readFileSync(new URL('./'+page+'.template.html',import.meta.url),'utf8').replace('<link rel="stylesheet" href="style.css">','<style>'+css+'</style>');
+ output=output.replace('<script type="module" src="'+scriptName+'.js"></script>','<script>(function(){'+random+'\n'+discovery+'\n'+pageScript+'\n})();</script>');
+ output=output.replace('</body>',navScript+'</body>');
+ writeFileSync(new URL('./dist/'+page+'.html',import.meta.url),output);
+ writeFileSync(new URL('../'+page+'.html',import.meta.url),output.replaceAll('href="index.html','href="lucky-orbit-fixed.html'));
+}
 console.log('Built self-contained HTML for browser and Netlify.');
