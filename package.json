@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test random.test.js discovery.test.js daily-state.test.js release.test.js backgrounds.test.js motion.test.js",
+    "test": "node --test random.test.js discovery.test.js daily-state.test.js release.test.js backgrounds.test.js motion.test.js sharing.test.js",
     "dev": "python3 -m http.server 4173 --directory dist"
   }
 }
