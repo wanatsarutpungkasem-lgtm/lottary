@@ -1,10 +1,11 @@
+import {readKeeps} from './safe-state.js';
 import {secureIndex} from './discovery.js';
 import {cards} from './siamsi-cards.js';
 import {createMotionSession} from './motion.js';
 const $=id=>document.getElementById(id),dialog=$('siamsi-dialog');
 let busy=false,ready=false,current='',currentCard=null,choice='',saved=[],saveOK=true;
 const savedKey='lucky-siamsi-keeps-v1';
-try{const value=JSON.parse(localStorage.getItem(savedKey)||'[]');if(Array.isArray(value))saved=value.filter(v=>Number.isInteger(v.id)&&v.id>=1&&v.id<=28&&Number.isFinite(v.time)).slice(0,28);}catch{saveOK=false;}
+try{saved=readKeeps(localStorage.getItem(savedKey)||'[]');}catch{saveOK=false;}
 function showCard(card,kept=false){
  if(motion.running)motion.stop('stopped');
  currentCard=card;choice=kept?'keep':'';$('paper-number').textContent='ใบที่ '+card.id+' จาก 28 ใบ';$('paper-tone').textContent=card.tone;$('paper-title').textContent=card.title;$('paper-reading').textContent=card.reading;$('paper-action').textContent=card.action;$('paper-wish').textContent=card.wish;

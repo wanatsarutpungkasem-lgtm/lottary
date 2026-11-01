@@ -1,3 +1,4 @@
+import {readHistory} from './safe-state.js';
 import {randomDigits} from './random.js';
 const $ = id => document.getElementById(id);
 const signs={
@@ -22,7 +23,7 @@ setSign();
 $('zodiac').addEventListener('change',()=>{setSign();placeholders();});
 const key = 'lucky-orbit-history-v1';
 let history = [], current = '', busy = false, storageOK = true;
-try { const value = JSON.parse(localStorage.getItem(key) || '[]'); if(Array.isArray(value)) history=value.filter(x=>x&&typeof x.name==='string'&&/^\d{2}$|^\d{3}$|^\d{6}$/.test(x.number)&&Number.isFinite(x.time)).slice(0,200); } catch { storageOK=false; }
+try {history=readHistory(localStorage.getItem(key)||'[]');}catch{storageOK=false;}
 const ballPalette=[['#fff2bf','#e5b851','#8b5817']];
 function paintBall(ball,digit){
  const colors=ballPalette[Number(digit)%ballPalette.length];
