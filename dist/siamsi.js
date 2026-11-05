@@ -1,11 +1,13 @@
+import {requireMember} from './member-gate.js';
+import {saveMemberKeep} from './auth-client.js';
 import {readKeeps} from './safe-state.js';
 import {secureIndex} from './discovery.js';
 import {cards} from './siamsi-cards.js';
 import {createMotionSession} from './motion.js';
 const $=id=>document.getElementById(id),dialog=$('siamsi-dialog');
 let busy=false,ready=false,current='',currentCard=null,choice='',saved=[],saveOK=true;
-const savedKey='lucky-siamsi-keeps-v1';
-try{saved=readKeeps(localStorage.getItem(savedKey)||'[]');}catch{saveOK=false;}
+let savedKey=null;
+document.addEventListener('lucky-member-ready',event=>{savedKey='lucky-member-keeps-'+event.detail.id;try{saved=readKeeps(localStorage.getItem(savedKey)||'[]');}catch{saved=[];saveOK=false;}renderSaved();});
 function showCard(card,kept=false){
  if(motion.running)motion.stop('stopped');
  currentCard=card;choice=kept?'keep':'';$('paper-number').textContent='ใบที่ '+card.id+' จาก 28 ใบ';$('paper-tone').textContent=card.tone;$('paper-title').textContent=card.title;$('paper-reading').textContent=card.reading;$('paper-action').textContent=card.action;$('paper-wish').textContent=card.wish;
@@ -14,7 +16,7 @@ function showCard(card,kept=false){
 }
 for(const id of ['paper-close','paper-done'])$(id).addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>{document.body.classList.remove('modal-open');$('shake').focus({preventScroll:true});$('shake-status').textContent=choice==='keep'?'เก็บใบนี้ไว้แล้ว เปิดอ่านได้ด้านล่าง':choice==='leave'?'วางใบนี้ไว้ที่เว็บแล้ว ก้าวต่ออย่างเบาใจ':'ปิดใบข้อคิดแล้ว ยังไม่ได้เก็บใบนี้';});
-async function reveal(){if(busy)return;busy=true;$('shake').disabled=true;$('motion-start').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));showCard(card);}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('motion-start').disabled=false;$('cylinder').classList.remove('shaking');}}
+async function reveal(){if(busy)return;busy=true;const member=await requireMember();if(!member){busy=false;motion.stop('stopped');return;}$('shake').disabled=true;$('motion-start').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));showCard(card);}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('motion-start').disabled=false;$('cylinder').classList.remove('shaking');}}
 $('paper-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(current);$('paper-copy').textContent='คัดลอกแล้ว ✓';}catch{$('paper-copy').textContent='เลือกข้อความแล้วคัดลอกเองได้ครับ';}});
 function renderSaved(){
  $('saved-leaves').replaceChildren();$('saved-note').textContent=saveOK?'เก็บเฉพาะเบราว์เซอร์นี้ ล้างข้อมูลเว็บไซต์แล้วจะหาย':'บันทึกถาวรไม่ได้ กรุณาดาวน์โหลดใบไว้ในเครื่อง';
@@ -22,7 +24,7 @@ function renderSaved(){
  for(const item of saved){const card=cards[item.id-1];const article=document.createElement('article'),title=document.createElement('h3'),note=document.createElement('p'),open=document.createElement('button'),remove=document.createElement('button');article.className='saved-leaf';title.textContent='ใบที่ '+card.id+' · '+card.title;note.textContent=card.wish;open.textContent='เปิดอ่าน';remove.textContent='วางใบนี้ไว้';open.className=remove.className='text-button';open.addEventListener('click',()=>showCard(card,true));remove.addEventListener('click',()=>{saved=saved.filter(v=>v.id!==card.id);persist();$('saved-message').textContent='วางใบที่ '+card.id+' ไว้แล้ว ขอให้ก้าวต่ออย่างเบาใจ';});article.append(title,note,open,remove);$('saved-leaves').append(article);}
 }
 function persist(){try{localStorage.setItem(savedKey,JSON.stringify(saved));saveOK=true;}catch{saveOK=false;}renderSaved();}
-$('paper-keep').addEventListener('click',()=>{if(!currentCard)return;saved=[{id:currentCard.id,time:Date.now()},...saved.filter(v=>v.id!==currentCard.id)];persist();choice='keep';$('paper-keep').disabled=true;$('paper-keep').textContent='เก็บใบนี้แล้ว ✓';$('paper-choice-status').textContent=saveOK?'เก็บไว้ในเบราว์เซอร์แล้ว':'บันทึกไม่ได้ กรุณาดาวน์โหลดไว้ในเครื่อง';});
+$('paper-keep').addEventListener('click',async()=>{if(!currentCard||!await requireMember())return;saved=[{id:currentCard.id,time:Date.now()},...saved.filter(v=>v.id!==currentCard.id)];persist();choice='keep';const savedLeafId=currentCard.id;saveMemberKeep(savedLeafId).then(saved=>{if(saved&&choice==='keep'&&currentCard?.id===savedLeafId)$('paper-choice-status').textContent='เก็บใบนี้ไว้ในบัญชีแล้ว';}).catch(()=>{$('paper-choice-status').textContent='เก็บในเครื่องแล้ว แต่ส่งเข้าบัญชีไม่สำเร็จ';});$('paper-keep').disabled=true;$('paper-keep').textContent='เก็บใบนี้แล้ว ✓';$('paper-choice-status').textContent=saveOK?'เก็บไว้ในเบราว์เซอร์แล้ว':'บันทึกไม่ได้ กรุณาดาวน์โหลดไว้ในเครื่อง';});
 $('paper-leave').addEventListener('click',()=>{if(currentCard){saved=saved.filter(v=>v.id!==currentCard.id);persist();}choice='leave';dialog.close();});
 $('paper-download').addEventListener('click',()=>{if(!currentCard)return;const url=URL.createObjectURL(new Blob([current],{type:'text/plain;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download='Lucky-By-wanatsarut-leaf-'+currentCard.id+'.txt';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);});
 renderSaved();
@@ -88,3 +90,5 @@ $('paper-image').addEventListener('click',async()=>{
   const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('สร้างภาพไม่สำเร็จ ลองดาวน์โหลดข้อความแทนได้ครับ');const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='Lucky-By-wanatsarut-leaf-'+card.id+'-v3.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('paper-choice-status').textContent='ส่งภาพ PNG ให้เบราว์เซอร์ดาวน์โหลดแล้ว';
  }catch(error){$('paper-choice-status').textContent=error.message;}finally{button.disabled=false;button.textContent='บันทึกใบนี้เป็นภาพ PNG';}
 });
+
+document.addEventListener('lucky-member-locked',()=>{motion.stop('paused');ready=false;release(false);if(dialog.open)dialog.close();});

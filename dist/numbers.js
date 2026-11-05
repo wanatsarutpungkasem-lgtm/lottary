@@ -1,3 +1,4 @@
+import {requireMember} from './member-gate.js';
 import {uniqueNumbers} from './discovery.js';
 import {bangkokDay,normalizeDaily,recordDaily} from './daily-state.js';
 const $=id=>document.getElementById(id),quotaKey='lucky-number-daily-v1';
@@ -24,6 +25,7 @@ function sync(){const q=quota();if(q.last)render(q.last,true);refreshQuota();}
 sync();window.addEventListener('storage',event=>{if(event.key===quotaKey||event.key===null)sync();});window.addEventListener('focus',refreshQuota);setInterval(refreshQuota,30000);
 $('numbers-form').addEventListener('submit',async event=>{
  event.preventDefault();if(generating)return;generating=true;refreshQuota();
+ const member=await requireMember();if(!member){generating=false;refreshQuota();return;}
  const generate=()=>{
   const q=quota();if(q.used>=3)throw new Error('ครบ 3 ครั้งของวันนี้แล้ว เลขล่าสุดยังคัดลอกได้ กลับมาเปิดชุดใหม่พรุ่งนี้ครับ');
   const digits=Number($('number-digits').value),count=Number($('number-count').value);

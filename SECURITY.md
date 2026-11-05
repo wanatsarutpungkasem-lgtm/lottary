@@ -39,7 +39,7 @@ CSP และการยืนยัน GitHub ไม่ใช่การข�
 
 Build ผ่านและทดสอบอัตโนมัติ 33 ข้อ รวม CSP ของทั้ง 6 หน้า, hash ของ standalone, รูปแบบข้อมูลเสียหาย และตรวจ sink ที่เสี่ยง
 
-รอบนี้ยังไม่ได้ทดสอบการบังคับ CSP ในเบราว์เซอร์จริง เพราะ browser use ถูกปิดในการตั้งค่า ผลทดสอบอัตโนมัติไม่ใช่ penetration test หลัง Deploy ต้องตรวจหมุนเลข เขย่า เก็บใบ ดาวน์โหลดภาพ คัดลอก และเมนูตั้งค่าบนมือถือจริงอีกครั้ง
+รอบนี้ในรุ่น 3.5 ยังไม่ได้ทดสอบการบังคับ CSP ในเบราว์เซอร์จริง เพราะ browser use ถูกปิดในการตั้งค่า ผลทดสอบอัตโนมัติไม่ใช่ penetration test หลัง Deploy ต้องตรวจหมุนเลข เขย่า เก็บใบ ดาวน์โหลดภาพ คัดลอก และเมนูตั้งค่าบนมือถือจริงอีกครั้ง
 
 ## แหล่งอ้างอิง
 
@@ -49,3 +49,8 @@ Build ผ่านและทดสอบอัตโนมัติ 33 ข้�
 - https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https
 - https://developer.chrome.com/docs/privacy-security/csp
 - https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors
+
+## รุ่น 3.7 — สมาชิกจริง
+CSP เปิด connect-src เฉพาะ https://wabbwmoeuxszibgzolzx.supabase.co เพื่อใช้ Auth และ Data API แทนการบล็อกทุก connection มี SDK ทางการ self-host แบบ pin เวอร์ชันและ lockfile คีย์ใน frontend เป็น publishable key เท่านั้น ไม่มี service_role/SMTP key การปกป้องข้อมูลสมาชิกอยู่ที่ RLS บนเซิร์ฟเวอร์ ไม่ได้อาศัยซ่อนหน้าเว็บ
+
+ทดสอบ ownership isolation บนฐานข้อมูลจริงผ่านธุรกรรมที่ rollback ทั้งหมด: เจ้าของอ่านข้อมูลของตัวเองได้ ผู้ใช้อื่นอ่าน/แก้/ลบไม่ได้ และปลอมเจ้าของตอน INSERT ไม่ได้ ยังไม่ทดสอบ signup/recovery แบบอีเมลครบวงจรเพราะรอ SMTP

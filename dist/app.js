@@ -1,3 +1,5 @@
+import {requireMember} from './member-gate.js';
+import {saveMemberDraw} from './auth-client.js';
 import {readHistory} from './safe-state.js';
 import {randomDigits} from './random.js';
 const $ = id => document.getElementById(id);
@@ -21,9 +23,9 @@ const requestedSign=new URLSearchParams(location.search).get('sign');
 if(requestedSign&&Object.hasOwn(signs,requestedSign))$('zodiac').value=requestedSign;
 setSign();
 $('zodiac').addEventListener('change',()=>{setSign();placeholders();});
-const key = 'lucky-orbit-history-v1';
+let key = null;
 let history = [], current = '', busy = false, storageOK = true;
-try {history=readHistory(localStorage.getItem(key)||'[]');}catch{storageOK=false;}
+document.addEventListener('lucky-member-ready',event=>{key='lucky-member-history-'+event.detail.id;try{history=readHistory(localStorage.getItem(key)||'[]');}catch{history=[];storageOK=false;}renderHistory();});
 const ballPalette=[['#fff2bf','#e5b851','#8b5817']];
 function paintBall(ball,digit){
  const colors=ballPalette[Number(digit)%ballPalette.length];
@@ -96,6 +98,7 @@ $('player').addEventListener('input',()=>{renderHistory();placeholders();});
 document.querySelectorAll('[name=digits]').forEach(input=>input.addEventListener('change',placeholders));
 $('draw-form').addEventListener('submit',async e=>{
  e.preventDefault();if(busy)return;busy=true;
+ const member=await requireMember();if(!member){busy=false;return;}
  const signKey=$('zodiac').value;
  const player=name(), digits=Number(document.querySelector('[name=digits]:checked').value);
  $('draw').disabled=true;$('player').disabled=true;$('zodiac').disabled=true;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=true);$('copy').hidden=true;current='';
@@ -110,7 +113,9 @@ $('draw-form').addEventListener('submit',async e=>{
   await pause(reduced?0:1100);
   $('universe').classList.add('revealing');document.querySelector('.live-dot').textContent='เปิดผลทีละลูก';
   await revealDraw(number,reduced);
+  const stillMember=await requireMember();if(!stillMember||stillMember.id!==member.id)return;
   current=number;document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));$('universe').classList.add('celebrate');$('result-label').textContent='เลขชุดนี้ของ '+player;$('result-note').textContent=digits+' หลัก · '+(signKey!=='none'?signs[signKey][0]+' '+signs[signKey][1].split(' · ')[0]+' · ':'')+time(Date.now());$('copy').hidden=false;$('copy').textContent='คัดลอกเลข ↗';history.unshift({name:player,number,time:Date.now(),sign:signKey});history=history.slice(0,200);save();renderHistory();
+  saveMemberDraw({name:player,number,sign:signKey}).then(saved=>{if(saved&&current===number)$('result-note').textContent+=' · บันทึกในบัญชีแล้ว';}).catch(()=>{if(current===number)$('result-note').textContent+=' · บันทึกในเครื่องแล้ว แต่ส่งเข้าบัญชีไม่สำเร็จ';});
   await pause(reduced?0:1100);
   openDrawDialog(number,player,signKey);
  }catch(error){$('result-label').textContent='ยังสุ่มไม่สำเร็จ';$('result-note').textContent=error.message;}

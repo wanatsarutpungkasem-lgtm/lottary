@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 test('all public routes declare a matching HTTPS canonical and Open Graph URL',()=>{
  const root='https://wanatsarutpungkasem-lgtm.github.io/lottary/';
- for(const page of ['index','how-it-works','zodiac','siamsi','lucky-numbers','about']){
+ for(const page of ['index','how-it-works','zodiac','siamsi','lucky-numbers','about','login']){
   const html=readFileSync(new URL('./dist/'+page+'.html',import.meta.url),'utf8');
   const expected=root+(page==='index'?'':page+'.html');
   assert.equal(html.match(/<link rel="canonical" href="([^"]+)"/)[1],expected);

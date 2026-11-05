@@ -3,7 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test random.test.js discovery.test.js daily-state.test.js release.test.js backgrounds.test.js motion.test.js sharing.test.js security.test.js",
-    "dev": "python3 -m http.server 4173 --directory dist"
+    "test": "node --test random.test.js discovery.test.js daily-state.test.js release.test.js backgrounds.test.js motion.test.js sharing.test.js security.test.js oauth.test.js member-access.test.js",
+    "dev": "python3 -m http.server 4173 --directory dist",
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }
