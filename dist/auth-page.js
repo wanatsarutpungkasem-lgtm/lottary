@@ -55,7 +55,7 @@ function updateOAuthButtons(){for(const button of document.querySelectorAll('[da
 async function refreshOAuth(){if(oauthChecking||busy)return;oauthChecking=true;updateOAuthButtons();try{
  oauthEnabled=await providerAvailability();
  for(const [name,enabled] of Object.entries(oauthEnabled))document.querySelector('[data-oauth-status="'+name+'"]').textContent=enabled?'พร้อมเชื่อมต่อ':'ยังไม่เปิดให้บริการ';
- $('oauth-status').textContent=Object.values(oauthEnabled).some(Boolean)?'เลือกบัญชีที่ต้องการ ระบบจะพาไปยืนยันกับผู้ให้บริการ':'ช่องทางบัญชีภายนอกกำลังตั้งค่า ใช้อีเมลหรือทดลองเล่นก่อนได้';
+ $('oauth-status').textContent=Object.values(oauthEnabled).some(Boolean)?'เลือกบัญชีที่ต้องการ ระบบจะพาไปยืนยันกับผู้ให้บริการ':'ช่องทางบัญชีภายนอกกำลังตั้งค่า กรุณารอเปิดช่องทางเข้าสู่ระบบ';
 }catch{for(const text of document.querySelectorAll('[data-oauth-status]'))text.textContent='ตรวจสถานะไม่สำเร็จ';$('oauth-status').textContent='ตรวจการเชื่อมต่อไม่ได้ กรุณาลองใหม่';oauthEnabled={google:false,github:false,facebook:false};}finally{oauthChecking=false;updateOAuthButtons();}}
 for(const button of document.querySelectorAll('[data-oauth]'))button.addEventListener('click',async()=>{
  const provider=button.dataset.oauth;if(busy||!oauthEnabled[provider])return;
