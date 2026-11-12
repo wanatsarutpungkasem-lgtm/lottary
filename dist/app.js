@@ -1,5 +1,6 @@
-import {requireMember} from './member-gate.js';
-import {saveMemberDraw} from './auth-client.js';
+import {requireMember} from './member-gate.js?v=3.21';
+import {normalizePlayerName,selectPlayerName} from './player-name.js';
+import {authClient,saveMemberDraw} from './auth-client.js';
 import {readHistory} from './safe-state.js';
 import {randomDigits} from './random.js';
 const $ = id => document.getElementById(id);
@@ -25,7 +26,17 @@ setSign();
 $('zodiac').addEventListener('change',()=>{setSign();placeholders();});
 let key = null;
 let history = [], current = '', busy = false, storageOK = true;
-document.addEventListener('lucky-member-ready',event=>{key='lucky-member-history-'+event.detail.id;try{history=readHistory(localStorage.getItem(key)||'[]');}catch{history=[];storageOK=false;}renderHistory();});
+let playerStorageKey=null,playerEdited=false,playerOwner=null;
+function updatePlayerIntention(){const nickname=normalizePlayerName($('player').value);$('player-intention').textContent=nickname?'ตั้งจิตรับเลขสำหรับ '+nickname:'ใส่ชื่อเล่น แล้วเริ่มช่วงเวลาของคุณ';}
+function rejectPlayerName(){const message='กรุณาใส่ชื่อเล่นก่อนหมุนลูกบอล';$('player').setCustomValidity(message);$('player').setAttribute('aria-invalid','true');$('player-error').textContent=message;$('player-error').hidden=false;}
+$('player').addEventListener('invalid',rejectPlayerName);
+document.addEventListener('lucky-member-ready',async event=>{
+ const id=event.detail.id;playerOwner=id;key='lucky-member-history-'+id;playerStorageKey='lucky-member-player-'+id;let savedName='';
+ try{history=readHistory(localStorage.getItem(key)||'[]');savedName=localStorage.getItem(playerStorageKey)||'';}catch{history=[];storageOK=false;}
+ if(!playerEdited)$('player').value=selectPlayerName(savedName,'');updatePlayerIntention();renderHistory();
+ try{const {data,error}=await authClient().from('lucky_member_profiles').select('display_name').eq('user_id',id).maybeSingle();if(!error&&playerOwner===id&&!playerEdited){$('player').value=selectPlayerName(savedName,data?.display_name);updatePlayerIntention();renderHistory();}}catch{}
+});
+document.addEventListener('lucky-member-locked',()=>{playerOwner=null;$('player').value='';updatePlayerIntention();});
 const ballPalette=[['#fff2bf','#e5b851','#8b5817']];
 function paintBall(ball,digit){
  const colors=ballPalette[Number(digit)%ballPalette.length];
@@ -45,17 +56,16 @@ function startMixing(){
    const progress=j/48, wave=Math.sin(progress*Math.PI), angle=start+progress*Math.PI*6+Math.sin(progress*Math.PI*4+i*.5)*wave*.35;
    const r=radius+(28-radius)*wave;
    const depth=Math.sin(angle);
-   return {transform:`translate3d(${(40.5+Math.cos(angle)*r-x)*size/100}px,${(40.5+Math.sin(angle)*r-y)*size/100}px,0) scale(${1+depth*.1*wave}) rotate(${progress*1080}deg)`,filter:`brightness(${1+depth*.15*wave})`};
+   return {transform:`translate3d(${(40.5+Math.cos(angle)*r-x)*size/100}px,${(40.5+Math.sin(angle)*r-y)*size/100}px,0) scale(${1+depth*.1*wave}) rotate(${progress*1080}deg)`};
   });
   ballAnimations.push(ball.animate(frames,{duration:2000+(i%4)*130,iterations:Infinity,easing:'linear'}));
  });
 }
 function stopMixing(){
- ballAnimations.forEach(animation=>{
-  const ball=animation.effect.target, pose=getComputedStyle(ball).transform;
-  animation.cancel();
-  ball.animate([{transform:pose},{transform:'none'}],{duration:650,easing:'cubic-bezier(.16,1,.3,1)'});
- });ballAnimations=[];
+ // Read all poses before cancelling animations; avoid alternating style reads/writes.
+ const poses=ballAnimations.map(animation=>({animation,ball:animation.effect.target,pose:getComputedStyle(animation.effect.target).transform}));
+ ballAnimations=[];
+ for(const {animation,ball,pose} of poses){animation.cancel();ball.animate([{transform:pose},{transform:'none'}],{duration:480,easing:'cubic-bezier(.22,1,.36,1)'});} 
 }
 async function revealDraw(number,reduced){
  $('result-balls').replaceChildren();
@@ -66,7 +76,7 @@ async function revealDraw(number,reduced){
   $('result-label').textContent=`กำลังเปิดลูกที่ ${i+1} จาก ${slots.length}`;
  }
 }
-function name(){ return $('player').value.trim().normalize('NFC') || 'ผู้เล่น'; }
+function name(){return normalizePlayerName($('player').value);}
 function time(t){return new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
 function renderHistory(){
  const items=history.filter(x=>x.name===name()).slice(0,8);$('history-list').replaceChildren();
@@ -94,19 +104,26 @@ drawDialog.addEventListener('click',event=>{if(event.target===drawDialog){const 
 $('popup-copy').addEventListener('click',async()=>{if(!current)return;try{await navigator.clipboard.writeText(current);$('popup-copy').textContent='คัดลอกแล้ว ✓';}catch{$('popup-copy').textContent='กรุณาเลือกเลขแล้วคัดลอกเอง';}});
 function showBalls(number){$('result-balls').replaceChildren();for(const [i,d] of [...number].entries()){const b=document.createElement('span');b.className='result-ball';b.style.animationDelay=(i*100)+'ms';paintBall(b,d);$('result-balls').append(b);}}
 function placeholders(){current='';$('copy').hidden=true;$('result-label').textContent='เลขชุดต่อไป กำลังรอคุณอยู่';$('result-note').textContent='หายใจลึก ๆ แล้วลองหมุนดูสักครั้ง';$('result-balls').replaceChildren();for(let i=0;i<Number(document.querySelector('[name=digits]:checked').value);i++){const b=document.createElement('span');b.className='result-ball placeholder';b.textContent='?';$('result-balls').append(b);}}
-$('player').addEventListener('input',()=>{renderHistory();placeholders();});
+$('player').addEventListener('input',()=>{playerEdited=true;$('player').setCustomValidity('');$('player').removeAttribute('aria-invalid');$('player-error').hidden=true;updatePlayerIntention();renderHistory();placeholders();});
 document.querySelectorAll('[name=digits]').forEach(input=>input.addEventListener('change',placeholders));
 $('draw-form').addEventListener('submit',async e=>{
- e.preventDefault();if(busy)return;busy=true;
- const member=await requireMember();if(!member){busy=false;return;}
+ e.preventDefault();if(busy)return;const requestedPlayer=name();if(!requestedPlayer){rejectPlayerName();$('player').focus();$('player').reportValidity();return;}busy=true;
+ $('draw').disabled=true;$('draw').setAttribute('aria-busy','true');
+ const drawCaption=$('draw').querySelector('[data-draw-caption]');
+ const previousCaption=drawCaption?.textContent;if(drawCaption)drawCaption.textContent='กำลังตรวจสมาชิก…';
+ let member;try{member=await requireMember();}catch{ $('result-note').textContent='เชื่อมต่อระบบสมาชิกไม่ได้ กรุณาลองอีกครั้ง'; }
+ if(drawCaption)drawCaption.textContent=previousCaption;
+ $('draw').removeAttribute('aria-busy');
+ if(!member){busy=false;$('draw').disabled=false;return;}
  const signKey=$('zodiac').value;
- const player=name(), digits=Number(document.querySelector('[name=digits]:checked').value);
+ const player=requestedPlayer;$('player').value=player;updatePlayerIntention();try{if(playerStorageKey)localStorage.setItem(playerStorageKey,player);}catch{}
+ const digits=Number(document.querySelector('[name=digits]:checked').value);
  $('draw').disabled=true;$('player').disabled=true;$('zodiac').disabled=true;document.querySelectorAll('[name=digits]').forEach(x=>x.disabled=true);$('copy').hidden=true;current='';
  try {
   // Decide the result exactly once; the animation never changes or filters it.
   const number=randomDigits(digits), reduced=(matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft');
   document.getElementById('movable-machine').classList.remove('reveal-flash','ceremony-finale');$('universe').classList.remove('celebrate');$('universe').classList.add('spinning');document.getElementById('movable-machine').classList.add('draw-ceremony');
-  document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='รอลุ้นเลขของคุณทีละลูก';
+  document.querySelector('.live-dot').textContent='กำลังหมุน';$('result-label').textContent='เริ่มเขย่าลูกบอล…';$('result-note').textContent='ตั้งจิตรับเลขสำหรับ '+player+' · รอลุ้นทีละลูก';
   if(!reduced)startMixing();
   await pause(reduced?100:1100);
   $('result-label').textContent='ลูกบอลกำลังรวมตัว…';$('universe').classList.add('peak');

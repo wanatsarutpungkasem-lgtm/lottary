@@ -1,4 +1,5 @@
-import {requireMember} from './member-gate.js';
+import {pendingLeaf,storePendingLeaf} from './temple-journey.js';
+import {requireMember} from './member-gate.js?v=3.21';
 import {saveMemberKeep} from './auth-client.js';
 import {readKeeps} from './safe-state.js';
 import {secureIndex} from './discovery.js';
@@ -6,8 +7,9 @@ import {cards} from './siamsi-cards.js';
 import {createMotionSession} from './motion.js';
 const $=id=>document.getElementById(id),dialog=$('siamsi-dialog');
 let busy=false,ready=false,current='',currentCard=null,choice='',saved=[],saveOK=true;
-let savedKey=null;
-document.addEventListener('lucky-member-ready',event=>{savedKey='lucky-member-keeps-'+event.detail.id;try{saved=readKeeps(localStorage.getItem(savedKey)||'[]');}catch{saved=[];saveOK=false;}renderSaved();});
+let receiptOwner=null;
+let savedKey=null,vessel3d=null,vesselLoading=false;
+document.addEventListener('lucky-member-ready',event=>{receiptOwner=event.detail.id;savedKey='lucky-member-keeps-'+event.detail.id;checkCabinetRead();try{saved=readKeeps(localStorage.getItem(savedKey)||'[]');}catch{saved=[];saveOK=false;}renderSaved();});
 function showCard(card,kept=false){
  if(motion.running)motion.stop('stopped');
  currentCard=card;choice=kept?'keep':'';$('paper-number').textContent='ใบที่ '+card.id+' จาก 28 ใบ';$('paper-tone').textContent=card.tone;$('paper-title').textContent=card.title;$('paper-reading').textContent=card.reading;$('paper-action').textContent=card.action;$('paper-wish').textContent=card.wish;
@@ -16,7 +18,7 @@ function showCard(card,kept=false){
 }
 for(const id of ['paper-close','paper-done'])$(id).addEventListener('click',()=>dialog.close());
 dialog.addEventListener('close',()=>{document.body.classList.remove('modal-open');$('shake').focus({preventScroll:true});$('shake-status').textContent=choice==='keep'?'เก็บใบนี้ไว้แล้ว เปิดอ่านได้ด้านล่าง':choice==='leave'?'วางใบนี้ไว้ที่เว็บแล้ว ก้าวต่ออย่างเบาใจ':'ปิดใบข้อคิดแล้ว ยังไม่ได้เก็บใบนี้';});
-async function reveal(){if(busy)return;busy=true;const member=await requireMember();if(!member){busy=false;motion.stop('stopped');return;}$('shake').disabled=true;$('motion-start').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));showCard(card);}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('motion-start').disabled=false;$('cylinder').classList.remove('shaking');}}
+async function reveal(){if(busy)return;busy=true;const member=await requireMember();if(!member){busy=false;motion.stop('stopped');return;}$('shake').disabled=true;$('motion-start').disabled=true;try{const card=cards[secureIndex(cards.length)],soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';$('ritual-step').textContent='๓ · รับข้อคิดที่ตรงใจ';$('fallen-stick').classList.remove('drawn');$('cylinder').classList.add('shaking');await new Promise(r=>setTimeout(r,soft?0:300));$('cylinder').classList.remove('shaking');$('stick-number').textContent=card.id;$('fallen-stick').classList.add('drawn');if(vessel3d)await vessel3d.reveal(card.id,soft);else await new Promise(r=>setTimeout(r,soft?0:800));document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'reveal'}));if(storePendingLeaf(localStorage,member.id,card.id)){showReceipt(card.id);}else{$('shake-status').textContent='เครื่องนี้เก็บไม้รอรับไม่ได้ จึงเปิดใบให้ตรงนี้';showCard(card);}}catch(error){$('shake-status').textContent=error.message;}finally{busy=false;$('shake').disabled=false;$('motion-start').disabled=false;$('cylinder').classList.remove('shaking');}}
 $('paper-copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(current);$('paper-copy').textContent='คัดลอกแล้ว ✓';}catch{$('paper-copy').textContent='เลือกข้อความแล้วคัดลอกเองได้ครับ';}});
 function renderSaved(){
  $('saved-leaves').replaceChildren();$('saved-note').textContent=saveOK?'เก็บเฉพาะเบราว์เซอร์นี้ ล้างข้อมูลเว็บไซต์แล้วจะหาย':'บันทึกถาวรไม่ได้ กรุณาดาวน์โหลดใบไว้ในเครื่อง';
@@ -36,12 +38,12 @@ function animate(now){
  velocity+=(targetTilt-tilt)*.14*step;velocity*=Math.pow(.69,step);tilt+=velocity*step;sway+=(targetSway-sway)*Math.min(1,.2*step);
  const soft=matchMedia('(prefers-reduced-motion: reduce)').matches||document.documentElement.dataset.effects==='soft';
  cylinder.style.transform='translateX(calc(-50% + '+(soft?sway*.2:sway)+'px)) rotate('+(soft?tilt*.18:tilt)+'deg)';
- cylinder.style.setProperty('--rattle',Math.max(-13,Math.min(13,-velocity*3))+'deg');
- if(held||Math.abs(targetTilt-tilt)>.05||Math.abs(velocity)>.05||Math.abs(targetSway-sway)>.05)frame=requestAnimationFrame(animate);else{frame=0;previous=0;cylinder.style.transform='';cylinder.style.setProperty('--rattle','0deg');}
+ cylinder.style.setProperty('--rattle',Math.max(-13,Math.min(13,-velocity*3))+'deg');vessel3d?.setMotion(soft?tilt*.18:tilt,soft?sway*.2:sway,Math.max(-13,Math.min(13,-velocity*3)));
+ if(held||Math.abs(targetTilt-tilt)>.05||Math.abs(velocity)>.05||Math.abs(targetSway-sway)>.05)frame=requestAnimationFrame(animate);else{frame=0;previous=0;cylinder.style.transform='';cylinder.style.setProperty('--rattle','0deg');vessel3d?.setMotion(0,0,0);}
 }
 function wake(){if(!frame)frame=requestAnimationFrame(animate);}
 function release(announce=true){held=false;pointer=null;surface.classList.remove('is-held');targetTilt=targetSway=0;wake();if(announce&&!busy&&beats<6)$('shake-status').textContent='จับกระบอกแล้วเขย่าต่ออีก '+(6-beats)+' จังหวะ';}
-function resetShake(){release(false);beats=0;direction=0;$('shake-progress').value=0;$('fallen-stick').classList.remove('drawn');}
+function resetShake(){vessel3d?.reset();release(false);beats=0;direction=0;$('shake-progress').value=0;$('fallen-stick').classList.remove('drawn');}
 function beat(){beats++;document.dispatchEvent(new CustomEvent('lucky-sound',{detail:'wood'}));$('shake-progress').value=beats;$('shake-status').textContent='เขย่าแล้ว '+beats+' / 6 จังหวะ';if(beats>=6){release();reveal();}}
 surface.addEventListener('pointerdown',event=>{if(motion.running)return;if(!ready){$('shake-status').textContent='กดตั้งจิตก่อน แล้วค่อยจับกระบอกเขย่าครับ';return;}if(busy||held||event.isPrimary===false||event.button!==0)return;if(beats>=6)resetShake();held=true;pointer=event.pointerId;lastX=anchorX=event.clientX;surface.setPointerCapture(pointer);surface.classList.add('is-held');$('shake-status').textContent='ลากสลับซ้าย–ขวาเพื่อเขย่า';wake();});
 surface.addEventListener('pointermove',event=>{if(!held||busy||event.pointerId!==pointer)return;const movement=event.clientX-lastX,dx=event.clientX-anchorX;lastX=event.clientX;targetTilt=Math.max(-24,Math.min(24,targetTilt*.55+movement*1.1));targetSway=Math.max(-28,Math.min(28,dx*.55));if(Math.abs(dx)>=28){const next=Math.sign(dx);if(next!==direction){direction=next;beat();}anchorX=event.clientX;}});
@@ -92,3 +94,11 @@ $('paper-image').addEventListener('click',async()=>{
 });
 
 document.addEventListener('lucky-member-locked',()=>{motion.stop('paused');ready=false;release(false);if(dialog.open)dialog.close();});
+
+async function startVessel(){if(vesselLoading||vessel3d)return;vesselLoading=true;try{await import('./vendor/siamsi3d.js?v=3.21');vessel3d=globalThis.LuckyVessel.createRitualVessel(surface,{onReady:()=>{$('vessel-render-status').textContent='พร้อมตั้งจิต · เขย่าเบา ๆ 6 จังหวะ';},onError:()=>{surface.classList.remove('vessel-3d-ready');$('vessel-render-status').textContent='ใช้ภาพสำรอง · เขย่าและอ่านใบข้อคิดได้ตามปกติ';}});}catch{$('vessel-render-status').textContent='ใช้ภาพสำรอง · เขย่าได้ตามปกติ';}}
+document.addEventListener('lucky-member-ready',startVessel);
+if(!document.querySelector('[data-member-only]')?.hidden)startVessel();
+
+function showReceipt(id){const box=$('leaf-receipt');box.hidden=false;$('receipt-number').textContent='ได้ไม้หมายเลข '+id;$('receipt-link').href='garden.html?collect='+id;$('shake-status').textContent='ได้ไม้หมายเลข '+id+' แล้ว · เดินไปรับใบที่ตู้เซียมซี';box.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'nearest'});}
+function checkCabinetRead(){const query=new URLSearchParams(location.search),n=query.get('read'),receipt=pendingLeaf(localStorage,receiptOwner);if(n&&receipt&&String(receipt.id)===n){showCard(cards[receipt.id-1]);}else if(receipt)showReceipt(receipt.id);}
+requireMember().then(user=>{if(user&&!receiptOwner){receiptOwner=user.id;checkCabinetRead();}});

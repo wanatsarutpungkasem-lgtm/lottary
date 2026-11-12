@@ -1,4 +1,4 @@
-import {initMemberGate} from './member-gate.js';
+import {initMemberGate} from './member-gate.js?v=3.21';
 import {authClient,memberUser} from './auth-client.js';
 const links=[...document.querySelectorAll('[data-member-link]')];
 const loginPage=location.pathname.endsWith('/login.html');
