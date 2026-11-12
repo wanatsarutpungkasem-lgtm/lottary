@@ -1,0 +1,6 @@
+export const sanctuaryPalette=Object.freeze({coats:['#76667e','#6a7665','#c5baa3','#4b596a','#704c50'],skins:['#e3b995','#bb8763','#85583f'],hair:['short','tied'],moods:['evening','night','dawn']});
+export function cleanAlias(value){return typeof value==='string'?value.normalize('NFC').replace(/[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2060-\u206f]/g,'').trim().slice(0,16):'';}
+export function appearance(value={}){if(!value||typeof value!=='object')value={};return {color:sanctuaryPalette.coats.includes(value.color)?value.color:sanctuaryPalette.coats[0],skin:sanctuaryPalette.skins.includes(value.skin)?value.skin:sanctuaryPalette.skins[1],hairStyle:sanctuaryPalette.hair.includes(value.hairStyle)?value.hairStyle:'short'};}
+export function peerPayload(value){if(!value||typeof value!=='object'||typeof value.sid!=='string'||!/^[a-zA-Z0-9_-]{8,120}$/.test(value.sid)||!Number.isFinite(value.x)||!Number.isFinite(value.y))return null;const alias=cleanAlias(value.alias);if(!alias)return null;return {sid:value.sid,alias,x:Math.max(10,Math.min(90,value.x)),y:Math.max(53,Math.min(89,value.y)),...appearance(value),pose:value.pose==='wai'?'wai':'idle'};}
+export function cleanNote(value){return typeof value==='string'?value.slice(0,400):'';}
+

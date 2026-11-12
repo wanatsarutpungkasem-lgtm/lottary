@@ -1,4 +1,4 @@
-import {requireMember} from './member-gate.js';
+import {requireMember} from './member-gate.js?v=3.21';
 import {uniqueNumbers} from './discovery.js';
 import {bangkokDay,normalizeDaily,recordDaily} from './daily-state.js';
 const $=id=>document.getElementById(id),quotaKey='lucky-number-daily-v1';

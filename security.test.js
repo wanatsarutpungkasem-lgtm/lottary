@@ -3,11 +3,11 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {readHistory,readKeeps} from './dist/safe-state.js';
-const pages=['index','how-it-works','zodiac','siamsi','lucky-numbers','about','login'];
+const pages=['index','how-it-works','zodiac','siamsi','lucky-numbers','about','login','garden','worship'];
 const policy=h=>h.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)[1];
 test('public policies precede resources and deny external script, network, form and embedded content',()=>{
  for(const page of pages){const h=readFileSync('./dist/'+page+'.html','utf8'),p=policy(h);
-  for(const rule of ["default-src 'none'","script-src 'self'","connect-src https://wabbwmoeuxszibgzolzx.supabase.co","form-action 'none'","base-uri 'none'","object-src 'none'","frame-src 'none'"])assert.ok(p.split('; ').includes(rule));
+  for(const rule of ["default-src 'none'","script-src 'self'",(['garden','worship'].includes(page)?'connect-src https://wabbwmoeuxszibgzolzx.supabase.co wss://wabbwmoeuxszibgzolzx.supabase.co':'connect-src https://wabbwmoeuxszibgzolzx.supabase.co'),"form-action 'none'","base-uri 'none'","object-src 'none'","frame-src 'none'"])assert.ok(p.split('; ').includes(rule));
   assert.ok(h.indexOf('Content-Security-Policy')<h.indexOf('rel="stylesheet"'));
   assert.ok(h.includes('name="referrer" content="no-referrer"'));
   assert.ok(!p.includes('frame-ancestors')); // Unsupported in meta; do not pretend to enforce it.
@@ -15,7 +15,7 @@ test('public policies precede resources and deny external script, network, form 
  }
 });
 test('standalone scripts have exact CSP hashes without relaxing script execution',()=>{
- for(const page of ['lucky-orbit-fixed','how-it-works','zodiac','siamsi','lucky-numbers','about','login']){
+ for(const page of ['lucky-orbit-fixed','how-it-works','zodiac','siamsi','lucky-numbers','about','login','garden','worship']){
   const h=readFileSync('../'+page+'.html','utf8'),p=policy(h),scripts=[...h.matchAll(/<script>([\s\S]*?)<\/script>/g)];assert.equal(scripts.length,1);
   assert.ok(p.includes("script-src 'sha256-"+createHash('sha256').update(scripts[0][1]).digest('base64')+"'"));
   assert.ok(!p.includes('unsafe-eval'));assert.ok(!p.match(/script-src[^;]*unsafe-inline/));

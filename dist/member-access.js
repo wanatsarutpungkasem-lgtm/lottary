@@ -7,3 +7,17 @@ export async function memberAction(getUser,action,onDenied=()=>{}){
  if(!user){onDenied();return null;}
  return action(user);
 }
+// Share concurrent verification only; never reuse a previous successful check.
+export function createMemberResolver(getUser){
+ let pending=null,epoch=0;
+ const resolve=()=>{
+  if(pending)return pending;
+  const generation=epoch;
+  const request=verifiedMember(getUser).then(user=>generation===epoch?user:null);
+  pending=request;
+  request.finally(()=>{if(pending===request)pending=null;});
+  return request;
+ };
+ resolve.invalidate=()=>{epoch++;pending=null;};
+ return resolve;
+}

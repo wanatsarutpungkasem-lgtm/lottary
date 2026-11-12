@@ -35,8 +35,9 @@ $('auth-form').addEventListener('submit',async event=>{
 $('auth-resend').addEventListener('click',async()=>{if(busy)return;const email=$('auth-email').value.trim();if(!$('auth-email').reportValidity())return;lock(true);try{const {error}=await db.auth.resend({type:'signup',email,options:{emailRedirectTo:authReturn()}});if(error)throw error;status('หากบัญชียังรอยืนยัน ระบบจะส่งลิงก์ให้ กรุณาตรวจอีเมล');}catch(error){status(friendly(error),true);}finally{lock(false);}});
 async function showAccount(){
  const serial=++viewSerial,user=await memberUser();if(serial!==viewSerial)return;
- currentUser=user;$('member-panel').hidden=!user;$('auth-panel').hidden=Boolean(user)&&!recoveryReady;
- if(!user){$('member-draws').replaceChildren();$('member-keeps').replaceChildren();return;}
+ if(recoveryReady){$('auth-loading').hidden=true;$('auth-panel').hidden=false;return;}
+ $('auth-loading').hidden=true;currentUser=user;$('member-panel').hidden=!user;$('auth-panel').hidden=Boolean(user)&&!recoveryReady;
+ if(!user){refreshOAuth();$('member-draws').replaceChildren();$('member-keeps').replaceChildren();return;}
  $('member-email').textContent=user.email||'บัญชีสมาชิก';$('member-status').textContent='กำลังโหลดข้อมูลของคุณ…';
  const [profile,draws,keeps]=await Promise.all([db.from('lucky_member_profiles').select('display_name,zodiac').eq('user_id',user.id).maybeSingle(),db.from('lucky_member_draws').select('id,number,player_name,zodiac,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(50),db.from('lucky_member_keeps').select('leaf_id,created_at').eq('user_id',user.id).order('created_at',{ascending:false}).limit(28)]);
  if(serial!==viewSerial||currentUser?.id!==user.id)return;
@@ -48,7 +49,7 @@ async function showAccount(){
 }
 $('member-profile').addEventListener('submit',async event=>{event.preventDefault();if(!currentUser)return;const button=$('profile-save');button.disabled=true;try{const {error}=await db.from('lucky_member_profiles').upsert({user_id:currentUser.id,display_name:$('member-name').value.trim(),zodiac:$('member-zodiac').value},{onConflict:'user_id'});if(error)throw error;$('member-status').textContent='บันทึกข้อมูลส่วนตัวแล้ว';}catch{$('member-status').textContent='บันทึกไม่สำเร็จ กรุณาลองใหม่';}finally{button.disabled=false;}});
 $('member-logout').addEventListener('click',async()=>{const button=$('member-logout');button.disabled=true;const {error}=await db.auth.signOut({scope:'local'});if(error){$('member-status').textContent='ออกจากระบบไม่สำเร็จ กรุณาลองใหม่';button.disabled=false;return;}currentUser=null;++viewSerial;$('member-draws').replaceChildren();$('member-keeps').replaceChildren();$('member-profile').reset();$('auth-panel').hidden=false;$('member-panel').hidden=true;setMode('login');status('ออกจากระบบบนเครื่องนี้แล้ว');button.disabled=false;});
-db.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recoveryReady=true;setTimeout(()=>{$('member-panel').hidden=true;$('auth-panel').hidden=false;setMode('update');},0);}else if(['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)){setTimeout(()=>{if(!recoveryReady)showAccount().catch(()=>status('โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรช',true));},0);}});
+db.auth.onAuthStateChange((event)=>{if(event==='PASSWORD_RECOVERY'){recoveryReady=true;setTimeout(()=>{$('auth-loading').hidden=true;$('member-panel').hidden=true;$('auth-panel').hidden=false;setMode('update');},0);}else if(['SIGNED_IN','SIGNED_OUT','USER_UPDATED'].includes(event)){setTimeout(()=>{if(!recoveryReady)showAccount().catch(()=>status('โหลดข้อมูลไม่สำเร็จ กรุณารีเฟรช',true));},0);}});
 
 let oauthEnabled={google:false,github:false,facebook:false},oauthChecking=false;
 function updateOAuthButtons(){for(const button of document.querySelectorAll('[data-oauth]'))button.disabled=busy||oauthChecking||!oauthEnabled[button.dataset.oauth];$('oauth-retry').disabled=busy||oauthChecking;}
@@ -64,7 +65,5 @@ for(const button of document.querySelectorAll('[data-oauth]'))button.addEventLis
  try{const destination=await prepareOAuth(db,provider,authReturn());$('auth-password').value='';$('auth-confirm').value='';location.assign(destination);}catch(error){$('oauth-status').textContent='เชื่อมต่อไม่สำเร็จ กรุณาตรวจสถานะหรือลองใหม่';lock(false);}
 });
 $('oauth-retry').addEventListener('click',refreshOAuth);
-refreshOAuth();
-
 setMode('login');
-(async()=>{try{const {error}=await db.auth.getSession();if(error){status(friendly(error),true);return;}if(!recoveryReady)await showAccount();const u=new URL(location.href),fragment=new URLSearchParams(u.hash.slice(1)),code=u.searchParams.get('error_code')||fragment.get('error_code');if(code)status(friendly({code}),true);if(u.searchParams.has('code')||u.hash||code){for(const key of ['code','error','error_code','error_description','access_token','refresh_token'])u.searchParams.delete(key);u.hash='';history.replaceState(null,'',u.pathname+u.search);}}catch{status('เชื่อมต่อระบบสมาชิกไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรช',true);}})();
+(async()=>{try{const {error}=await db.auth.getSession();if(error){$('auth-loading').hidden=true;$('auth-panel').hidden=false;status(friendly(error),true);return;}if(!recoveryReady)await showAccount();const u=new URL(location.href),fragment=new URLSearchParams(u.hash.slice(1)),code=u.searchParams.get('error_code')||fragment.get('error_code');if(code)status(friendly({code}),true);if(u.searchParams.has('code')||u.hash||code){for(const key of ['code','error','error_code','error_description','access_token','refresh_token'])u.searchParams.delete(key);u.hash='';history.replaceState(null,'',u.pathname+u.search);}}catch{$('auth-loading').hidden=true;$('auth-panel').hidden=false;status('เชื่อมต่อระบบสมาชิกไม่ได้ กรุณาตรวจอินเทอร์เน็ตแล้วรีเฟรช',true);}})();

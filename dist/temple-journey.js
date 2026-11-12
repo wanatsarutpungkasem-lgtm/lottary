@@ -1,0 +1,3 @@
+export function pendingLeaf(storage,owner){try{const p=JSON.parse(storage.getItem('lucky-pending-leaf-'+owner)||'null');return Number.isInteger(p?.id)&&p.id>=1&&p.id<=28&&Number.isFinite(p.time)&&p.time<=Date.now()+60000&&Date.now()-p.time<86400000?{id:p.id,time:p.time}:null;}catch{return null;}}
+export function storePendingLeaf(storage,owner,id){if(!owner||!Number.isInteger(id)||id<1||id>28)return false;try{storage.setItem('lucky-pending-leaf-'+owner,JSON.stringify({id,time:Date.now()}));return true;}catch{return false;}}
+export function requestedLeaf(search){const n=new URLSearchParams(search).get('collect');return n&&/^(?:[1-9]|1[0-9]|2[0-8])$/.test(n)?Number(n):null;}

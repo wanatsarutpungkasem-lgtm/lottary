@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {pendingLeaf,storePendingLeaf,requestedLeaf} from './dist/temple-journey.js';
+import {readCharacter} from './dist/character-profile.js';
+const memory=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
+test('pending leaf belongs to account and rejects stale or malformed receipts',()=>{const s=memory();assert.equal(storePendingLeaf(s,'one',28),true);assert.equal(pendingLeaf(s,'one').id,28);assert.equal(pendingLeaf(s,'two'),null);for(const p of [{id:29,time:Date.now()},{id:2,time:Date.now()-86400001},{id:2,time:Date.now()+120000},{id:'2',time:Date.now()},null]){s.setItem('lucky-pending-leaf-one',JSON.stringify(p));assert.equal(pendingLeaf(s,'one'),null);}assert.equal(storePendingLeaf(s,'one',0),false);});
+test('receipt routing accepts only exact leaf numbers',()=>{assert.equal(requestedLeaf('?collect=28'),28);for(const q of ['?collect=0','?collect=29','?collect=01','?collect=1e1','?collect=<script>'])assert.equal(requestedLeaf(q),null);});
+test('avatar onboarding is account scoped and recognizes all three templates',()=>{const s=memory();for(const preset of ['masculine','feminine','free']){s.setItem('lucky-character-one',JSON.stringify({version:1,preset,alias:'โอม'}));assert.equal(readCharacter(s,'one').preset,preset);assert.equal(readCharacter(s,'two'),null);}s.setItem('lucky-character-one','{}');assert.equal(readCharacter(s,'one'),null);});

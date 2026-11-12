@@ -26,12 +26,21 @@ import {resolveBackground,backgroundLabels} from './backgrounds.js';
   const aura=document.createElement('div');aura.className='orbit-atmosphere';aura.setAttribute('aria-hidden','true');
   for(let i=0;i<12;i++){const star=document.createElement('i');star.style.cssText=`--i:${i};--x:${8+(i*29)%84}%;--y:${6+(i*37)%88}%;--delay:${-(i*.73)}s`;aura.append(star);}stage.prepend(aura);
  }
- const targets=document.querySelectorAll('.intro,.source-notice,.experience,.ritual-layout,.saved-sanctuary,.quick-paths,.number-option,.zodiac-card,.privacy-panel');
- if('IntersectionObserver' in window&&!calm()){
-  const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('motion-visible');observer.unobserve(entry.target);}},{threshold:.06});
-  for(const target of targets){target.classList.add('motion-enter');observer.observe(target);}
-  document.documentElement.classList.add('motion-ready');
-  // Avoid hidden content when restoring from a background tab or browser history.
-  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')for(const target of targets)if(target.getBoundingClientRect().top<innerHeight)target.classList.add('motion-visible');});
- }
+ // Content stays in place: no scroll-entry observer or whole-panel translations.
+
+})();
+
+// Pause decorative loops in background tabs without affecting random outcomes.
+(()=>{const update=()=>{document.documentElement.dataset.motionPaused=String(document.hidden);};document.addEventListener('visibilitychange',update);update();})();
+
+// Acknowledge route clicks immediately while the browser loads and verifies auth.
+(()=>{
+ const status=document.createElement('div');status.className='route-status';status.hidden=true;status.setAttribute('role','status');status.textContent='กำลังเปิดหน้า…';document.body.append(status);
+ document.addEventListener('click',event=>{
+  const link=event.target.closest?.('a[href]');if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||link.target||link.hasAttribute('download'))return;
+  const next=new URL(link.href,location.href);
+  if(next.origin!==location.origin||next.pathname===location.pathname||!next.pathname.endsWith('.html'))return;
+  status.hidden=false;
+ });
+ window.addEventListener('pageshow',()=>{status.hidden=true;});
 })();
